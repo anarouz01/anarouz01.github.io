@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SiteSync Core - Tableau de bord chantiers</title>
+    <!-- CDN Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- CDN Heroicons -->
+    <script src="https://unpkg.com/heroicons@1.0.6"></script>
+    <!-- Police Inter (recommandée) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="css/styles.css" rel="stylesheet">
+    <link href="css/stylesDoc.css" rel="stylesheet">
+    <!-- Leaflet CSS et JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Styles supplémentaires pour la carte -->
+    <style>
+        #map {
+            height: 100%;
+            width: 100%;
+            background: #e5e7eb;
+            z-index: 1;
+        }
+        .leaflet-popup-content {
+            margin: 12px;
+        }
+        .leaflet-container {
+            font-family: 'Inter', sans-serif;
+        }
+        .custom-marker {
+            background: transparent;
+            border: none;
+        }
+    </style>
+
+</head>
+<body class="bg-gray-50 text-gray-700">
+    <!-- Conteneur principal -->
+    <div class="flex flex-col md:flex-row min-h-screen">
+        <!-- Header - fixe en haut -->
+        <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-50">
+            <div class="px-4 py-3 flex items-center justify-between">
+                <!-- Logo + Hamburger (mobile) -->
+                <div class="flex items-center space-x-3">
+                    <button id="hamburgerBtn" class="md:hidden text-gray-600 focus:outline-none">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 rounded-lg bg-blue-900 flex items-center justify-center">
+                            <span class="text-white font-bold text-sm">SS</span>
+                        </div>
+                        <h1 class="ml-2 text-xl font-bold text-blue-900">SiteSync Core</h1>
+                    </div>
+                </div>
+                
+                <!-- Barre de recherche (centrale sur desktop) -->
+                <div class="hidden md:block flex-1 max-w-2xl mx-8">
+                    <div class="relative">
+                        <input type="text" 
+                               id="searchInput" 
+                               placeholder="Rechercher un chantier, document..." 
+                               class="w-full px-4 py-2 pl-10 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <div class="absolute left-3 top-2.5 text-gray-400">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Section notifications + profil -->
+                <div class="flex items-center space-x-4">
+                    <!-- Bouton recherche mobile -->
+                    <button id="mobileSearchBtn" class="md:hidden text-gray-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </button>
+                    
+                    <!-- Notifications -->
+                    <div class="relative">
+                        <button id="notificationsBtn" class="relative p-1 text-gray-600 hover:text-blue-900 focus:outline-none">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                            </svg>
+                            <span id="notificationBadge" class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
+                        </button>
+                        
+                        <!-- Dropdown notifications -->
+                        <div id="notificationsDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white shadow-xl rounded-lg border border-gray-200 z-50">
+                            <div class="p-4 border-b">
+                                <h3 class="font-semibold text-gray-800">Notifications</h3>
+                            </div>
+                            <div class="max-h-96 overflow-y-auto">
+                                <div class="p-3 border-b hover:bg-gray-50">
+                                    <div class="flex justify-between">
+                                        <span class="text-sm font-medium text-gray-800">Nouveau document</span>
+                                        <span class="text-xs text-gray-500">Il y a 10 min</span>
+                                    </div>
+                                    <p class="text-sm text-gray-600 mt-1">Plan implantation VRD ajouté au chantier ZAC Les Hauts</p>
+                                </div>
+                                <div class="p-3 border-b hover:bg-gray-50">
+                                    <div class="flex justify-between">
+                                        <span class="text-sm font-medium text-gray-800">Alerte chantier</span>
+                                        <span class="text-xs text-gray-500">Il y a 1h</span>
+                                    </div>
+                                    <p class="text-sm text-gray-600 mt-1">2 retards signalés sur le chantier Résidence du Parc</p>
+                                </div>
+                                <div class="p-3 hover:bg-gray-50">
+                                    <div class="flex justify-between">
+                                        <span class="text-sm font-medium text-gray-800">Validation requise</span>
+                                        <span class="text-xs text-gray-500">Il y a 2h</span>
+                                    </div>
+                                    <p class="text-sm text-gray-600 mt-1">5 documents en attente de votre validation</p>
+                                </div>
+                            </div>
+                            <div class="p-3 border-t text-center">
+                                <a href="#" class="text-sm text-blue-900 font-medium hover:text-blue-700">Voir toutes les notifications</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Avatar utilisateur -->
+                    <div class="relative">
+                        <button id="userMenuBtn" class="flex items-center space-x-2 focus:outline-none">
+                            <div class="w-8 h-8 rounded-full bg-blue-900 flex items-center justify-center">
+                                <span class="text-white font-medium text-sm">PM</span>
+                            </div>
+                            <span class="hidden md:inline text-sm font-medium">Pierre Martin</span>
+                            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        
+                        <!-- Dropdown utilisateur -->
+                        <div id="userDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white shadow-xl rounded-lg border border-gray-200 z-50">
+                            <div class="p-4 border-b">
+                                <p class="font-medium text-gray-800">Pierre Martin</p>
+                                <p class="text-sm text-gray-600">Chef de projet</p>
+                            </div>
+                            <div class="py-2">
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mon profil</a>
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Paramètres</a>
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Aide</a>
+                            </div>
+                            <div class="border-t py-2">
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Déconnexion</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Barre recherche mobile (cachée par défaut) -->
+            <div id="mobileSearchBar" class="md:hidden px-4 pb-3 hidden">
+                <div class="relative">
+                    <input type="text" 
+                           placeholder="Rechercher un chantier, document..." 
+                           class="w-full px-4 py-2 pl-10 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <div class="absolute left-3 top-2.5 text-gray-400">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Sidebar navigation -->
+        <aside id="sidebar" class="sidebar-transition bg-white shadow-sm w-64 min-h-screen pt-16 fixed md:relative md:block hidden md:transform-none transform -translate-x-full md:translate-x-0 z-40">
+            <nav class="p-4 custom-scrollbar" style="max-height: calc(100vh - 4rem); overflow-y: auto;">
+                <ul class="space-y-1">
+                    <li>
+                        <a href="#" class="flex items-center px-4 py-3 bg-blue-50 text-blue-900 font-medium rounded-lg">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                            Tableau de bord
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                            </svg>
+                            Mes Chantiers
+                            <span class="ml-auto w-6 h-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            Documents
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Validations
+                            <span class="ml-auto w-6 h-6 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center">5</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            Photos
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            Planning
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            Paramètres
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+        
+        <!-- Contenu principal -->
+        <main class="flex-1 pt-16 md:ml-0">
+            <!-- Zone dashboard -->
+            <div id="dashboardView" class="p-4 md:p-8">
+                <!-- Section 1: En-tête dashboard -->
+                <div class="flex flex-col md:flex-row md:items-center justify-between mb-8">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">Tableau de bord</h2>
+                        <p id="currentDate" class="text-gray-600 mt-1">Chargement...</p>
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-3 mt-4 md:mt-0">
+                        <!-- Dropdown filtre -->
+                        <div class="relative">
+                            <button id="filterBtn" class="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                                </svg>
+                                Filtrer
+                                <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                            
+                            <div id="filterDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white shadow-xl rounded-lg border border-gray-200 z-50">
+                                <div class="py-1">
+                                    <button class="filter-option block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-filter="all">Tous les chantiers</button>
+                                    <button class="filter-option block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-filter="late">En retard</button>
+                                    <button class="filter-option block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-filter="risk">À risque</button>
+                                    <button class="filter-option block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-filter="validated">Validés</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Bouton nouveau chantier -->
+                        <button id="newProjectBtn" class="flex items-center px-4 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Nouveau chantier
+                        </button>
+                        
+                        <!-- Bouton exporter -->
+                        <button id="exportBtn" class="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                            </svg>
+                            Exporter
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Section 2: Cartes chantiers actifs -->
+                <div class="mb-10">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Chantiers actifs</h3>
+                    <div id="projectCards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Cartes seront générées dynamiquement -->
+                    </div>
+                </div>
+                
+                <!-- Alertes prioritaires et Photos récentes côte à côte -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+                    <!-- Section 3: Alertes prioritaires -->
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900">Alertes prioritaires</h3>
+                            <span id="alertCount" class="bg-gray-100 text-gray-800 text-sm font-medium px-3 py-1 rounded-full">3 alertes</span>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                            <div id="alertsList" class="divide-y divide-gray-100">
+                                <!-- Alertes seront générées dynamiquement -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Section 4: Photos récentes terrain -->
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900">Photos récentes</h3>
+                            <a href="#" class="text-sm text-blue-900 font-medium hover:text-blue-700">Voir tout</a>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <!-- Photos seront générées dynamiquement -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Validations en attente et Documents récents côte à côte -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Section 5: Validations en attente -->
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900">Validations en attente (5)</h3>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Demandeur</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="validationsTable" class="bg-white divide-y divide-gray-200">
+                                        <!-- Lignes seront générées dynamiquement -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Section 6: Documents récents -->
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900">Documents récents</h3>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                            <div id="documentsList" class="divide-y divide-gray-100">
+                                <!-- Documents seront générées dynamiquement -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Vue détail chantier (cachée par défaut) -->
+            <div id="projectDetailView" class="hidden p-4 md:p-8">
+                <!-- Barre navigation chantier -->
+                <div class="flex items-center mb-6">
+                    <button id="backToDashboardBtn" class="flex items-center text-blue-900 hover:text-blue-700 mr-4">
+                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                        Retour
+                    </button>
+                    <h2 id="projectDetailTitle" class="text-2xl font-bold text-gray-900">Détail chantier</h2>
+                </div>
+                
+                <!-- Onglets chantier -->
+                <div class="border-b border-gray-200 mb-6">
+                    <nav class="flex space-x-8 overflow-x-auto">
+                        <button class="project-tab active py-3 px-1 text-sm font-medium text-blue-900 border-b-2 border-blue-900">Général</button>       
+                        <button class="project-tab py-3 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300">Planning</button>                 
+                        <button class="project-tab py-3 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300">Discussions</button>
+                        <button class="project-tab py-3 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300">Documents</button>
+                        <button class="project-tab py-3 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300">Photos</button>
+                        <button class="project-tab py-3 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300">Tâches</button>
+                        <button class="project-tab py-3 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300">Signalements</button>
+                        <button class="project-tab py-3 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300">Equipe</button>
+                    </nav>
+                </div>
+                
+                <!-- Contenu selon onglet actif -->
+                <div id="projectTabContent">
+                    <!-- Onglet Général -->
+                    <div class="project-tab-content active">
+                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                                <div class="md:col-span-2">
+                                    <h3 class="text-lg font-semibold text-gray-900 mb-2" id="projectName">ZAC Les Hauts</h3>
+                                    <p class="text-gray-600 mb-4" id="projectAddress">📍 12 Rue Construction, Lyon 7</p>
+                                    <p class="text-gray-700" id="projectDescription">Chantier de voirie et réseaux divers (VRD) pour la nouvelle ZAC des Hauts de Lyon. Travaux d'infrastructure complète.</p>
+                                </div>
+                                <div class="bg-gray-50 rounded-lg p-4">
+                                    <h4 class="font-medium text-gray-900 mb-2">Informations clés</h4>
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600">Date début :</span>
+                                            <span class="font-medium" id="projectStartDate">15/02/2023</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600">Date fin prévue :</span>
+                                            <span class="font-medium" id="projectEndDate">30/11/2023</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600">Budget :</span>
+                                            <span class="font-medium" id="projectBudget">€2,450,000</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600">Statut :</span>
+                                            <span id="projectStatus" class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">En cours</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-6">
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-sm font-medium text-gray-700">Avancement</span>
+                                    <span id="projectProgressText" class="text-sm font-medium text-gray-900">65%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                    <div id="projectProgressBar" class="progress-bar h-2.5 rounded-full" style="--progress: 65%; width: 65%;"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="bg-blue-50 rounded-lg p-4">
+                                    <div class="flex items-center">
+                                        <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mr-3">
+                                            <svg class="w-5 h-5 text-blue-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.698-.833-2.464 0L4.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-600">Alertes actives</p>
+                                            <p id="projectAlerts" class="text-xl font-bold text-gray-900">2</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-green-50 rounded-lg p-4">
+                                    <div class="flex items-center">
+                                        <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center mr-3">
+                                            <svg class="w-5 h-5 text-green-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-600">Photos récentes</p>
+                                            <p id="projectPhotos" class="text-xl font-bold text-gray-900">15</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-purple-50 rounded-lg p-4">
+                                    <div class="flex items-center">
+                                        <div class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center mr-3">
+                                            <svg class="w-5 h-5 text-purple-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-600">Documents</p>
+                                            <p id="projectDocuments" class="text-xl font-bold text-gray-900">42</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Autres onglets (cachés) -->  
+                    <div class="project-tab-content hidden">
+                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                            <p class="text-gray-600">Contenu de l'onglet Planning. À développer.</p>
+                        </div>
+                    </div>                   
+                    <div class="project-tab-content hidden">
+                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                            <p class="text-gray-600">Contenu de l'onglet Discussions. À développer.</p>
+                        </div>
+                    </div>
+                    <div class="project-tab-content hidden">
+                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                            <p class="text-gray-600">Contenu de l'onglet Documents. À développer.</p>
+                        </div>
+                    </div>
+                    <div class="project-tab-content hidden">
+                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                            <p class="text-gray-600">Contenu de l'onglet Photos. À développer.</p>
+                        </div>
+                    </div>
+                    <div class="project-tab-content hidden">
+                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                            <p class="text-gray-600">Contenu de l'onglet Tâches. À développer.</p>
+                        </div>
+                    </div>
+                    <div class="project-tab-content hidden">
+                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                            <p class="text-gray-600">Contenu de l'onglet Signalements. À développer.</p>
+                        </div>
+                    </div>
+                    <div class="project-tab-content hidden">
+                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                            <p class="text-gray-600">Contenu de l'onglet Equipe. À développer.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- FAB (Floating Action Button) -->
+    <button id="fabBtn" class="fixed bottom-6 right-6 w-14 h-14 bg-blue-900 text-white rounded-full shadow-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 z-40 flex items-center justify-center">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+        </svg>
+    </button>
+    
+    <!-- Modal FAB -->
+    <div id="fabModal" class="modal-transition hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6 fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Ajouter un élément</h3>
+                <button id="closeFabModalBtn" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="space-y-3">
+                <button class="fab-option flex items-center w-full p-3 text-left rounded-lg hover:bg-gray-100">
+                    <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-blue-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2 . . ."></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-900">Importer un fichier</p>
+                        <p class="text-sm text-gray-600">Ajouter un document depuis votre ordinateur</p>
+                    </div>
+                </button>
+                
+                <button class="fab-option flex items-center w-full p-3 text-left rounded-lg hover:bg-gray-100">
+                    <div class="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-orange-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-900">Prendre/uploader photo</p>
+                        <p class="text-sm text-gray-600">Prendre une photo ou en importer une</p>
+                    </div>
+                </button>
+                
+                <button class="fab-option flex items-center w-full p-3 text-left rounded-lg hover:bg-gray-100">
+                    <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-green-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-900">Créer document texte</p>
+                        <p class="text-sm text-gray-600">Rédiger un nouveau document</p>
+                    </div>
+                </button>
+                
+                <button class="fab-option flex items-center w-full p-3 text-left rounded-lg hover:bg-gray-100">
+                    <div class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-purple-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-900">Ajouter lien externe</p>
+                        <p class="text-sm text-gray-600">Partager un lien vers une ressource externe</p>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Ajout Document -->
+    <div id="documentModal" class="modal-transition hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-semibold text-gray-900">Importer un document</h3>
+                <button id="closeDocumentModalBtn" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <form id="documentForm">
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Type de document</label>
+                        <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">Sélectionner un type</option>
+                            <option value="plan">Plan</option>
+                            <option value="report">Rapport</option>
+                            <option value="estimate">Devis</option>
+                            <option value="invoice">Facture</option>
+                            <option value="other">Autre</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Fichier</label>
+                        <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:bg-gray-50 transition-colors">
+                            <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                            </svg>
+                            <p class="text-gray-600 mb-2">Glissez-déposez un fichier ici ou cliquez pour parcourir</p>
+                            <p class="text-sm text-gray-500">PDF, DOC, XLS, JPG jusqu'à 10MB</p>
+                            <input type="file" class="hidden" id="fileInput">
+                        </div>
+                        <div id="fileInfo" class="hidden mt-4 p-3 bg-green-50 rounded-lg">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span id="fileName" class="text-green-800 font-medium"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Chantier associé</label>
+                        <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">Sélectionner un chantier</option>
+                            <option value="1">ZAC Les Hauts</option>
+                            <option value="2">Résidence du Parc</option>
+                            <option value="3">Centre commercial Les Portes</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Description (optionnel)</label>
+                        <textarea rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Ajoutez une description du document..."></textarea>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3 mt-8">
+                    <button type="button" id="cancelDocumentBtn" class="px-5 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        Annuler
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                        Ajouter le document
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Modal Export -->
+    <div id="exportModal" class="modal-transition hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6 fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-semibold text-gray-900">Exporter les données</h3>
+                <button id="closeExportModalBtn" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="p-4 bg-blue-50 rounded-lg">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="w-5 h-5 text-blue-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-blue-900">L'export va générer un rapport PDF contenant toutes les données visibles dans le tableau de bord.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Période</label>
+                    <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="all">Toutes les données</option>
+                        <option value="month">30 derniers jours</option>
+                        <option value="week">7 derniers jours</option>
+                        <option value="today">Aujourd'hui</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Format</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input type="radio" name="exportFormat" value="pdf" checked class="h-4 w-4 text-blue-900 focus:ring-blue-500">
+                            <div class="ml-3">
+                                <p class="font-medium text-gray-900">PDF</p>
+                                <p class="text-sm text-gray-500">Pour impression</p>
+                            </div>
+                        </label>
+                        <label class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input type="radio" name="exportFormat" value="excel" class="h-4 w-4 text-blue-900 focus:ring-blue-500">
+                            <div class="ml-3">
+                                <p class="font-medium text-gray-900">Excel</p>
+                                <p class="text-sm text-gray-500">Pour analyse</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3 mt-8">
+                <button type="button" id="cancelExportBtn" class="px-5 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    Annuler
+                </button>
+                <button type="button" id="confirmExportBtn" class="px-5 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    Générer l'export
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/data.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/discussions.js"></script>
+    <script src="js/documents.js"></script>
+    <script src="js/photos.js"></script>
+    <script src="js/planning.js"></script>
+    <script src="js/issues.js"></script>
+    <script src="js/issues-map.js"></script>
+    <script src="js/team.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>

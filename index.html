@@ -1,757 +1,705 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SiteSync Core - Tableau de bord chantiers</title>
-    <!-- CDN Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- CDN Heroicons -->
-    <script src="https://unpkg.com/heroicons@1.0.6"></script>
-    <!-- Police Inter (recommandée) -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="css/styles.css" rel="stylesheet">
-    <link href="css/stylesDoc.css" rel="stylesheet">
-    <!-- Leaflet CSS et JS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anarouz — Développement Web, SIG & Data Intelligence | Solutions sur mesure</title>
+  <meta name="description" content="Anarouz conçoit des solutions web, SIG et data sur mesure pour transformer vos données en outils stratégiques. Expert en développement web, intelligence géospatiale et intelligence artificielle." />
+  <meta name="keywords" content="développement web sur mesure, solutions SIG, intelligence géospatiale, cartographie web, data visualisation, analyse spatiale" />
+  <meta name="author" content="Anarouz" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://anarouz01.github.io/" />
 
-    <!-- Styles supplémentaires pour la carte -->
-    <style>
-        #map {
-            height: 100%;
-            width: 100%;
-            background: #e5e7eb;
-            z-index: 1;
-        }
-        .leaflet-popup-content {
-            margin: 12px;
-        }
-        .leaflet-container {
-            font-family: 'Inter', sans-serif;
-        }
-        .custom-marker {
-            background: transparent;
-            border: none;
-        }
-    </style>
+  <!-- Open Graph -->
+  <meta property="og:title" content="Anarouz — Développement Web, SIG & Data Intelligence" />
+  <meta property="og:description" content="Solutions web et géospatiales sur mesure pour transformer vos données en outils stratégiques performants." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://anarouz01.github.io/" />
+  <meta property="og:locale" content="fr_FR" />
 
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Anarouz — Développement Web, SIG & Data Intelligence" />
+  <meta name="twitter:description" content="Solutions web et géospatiales sur mesure pour transformer vos données en outils stratégiques." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Anarouz",
+    "url": "https://anarouz01.github.io/",
+    "description": "Spécialiste en développement web sur mesure, solutions SIG et data intelligence",
+    "serviceArea": "France",
+    "knowsAbout": ["développement web", "SIG", "cartographie interactive", "data visualisation", "intelligence artificielle"]
+  }
+  </script>
 </head>
-<body class="bg-gray-50 text-gray-700">
-    <!-- Conteneur principal -->
-    <div class="flex flex-col md:flex-row min-h-screen">
-        <!-- Header - fixe en haut -->
-        <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-50">
-            <div class="px-4 py-3 flex items-center justify-between">
-                <!-- Logo + Hamburger (mobile) -->
-                <div class="flex items-center space-x-3">
-                    <button id="hamburgerBtn" class="md:hidden text-gray-600 focus:outline-none">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                        </svg>
-                    </button>
-                    <div class="flex items-center">
-                        <div class="w-8 h-8 rounded-lg bg-blue-900 flex items-center justify-center">
-                            <span class="text-white font-bold text-sm">SS</span>
-                        </div>
-                        <h1 class="ml-2 text-xl font-bold text-blue-900">SiteSync Core</h1>
-                    </div>
-                </div>
-                
-                <!-- Barre de recherche (centrale sur desktop) -->
-                <div class="hidden md:block flex-1 max-w-2xl mx-8">
-                    <div class="relative">
-                        <input type="text" 
-                               id="searchInput" 
-                               placeholder="Rechercher un chantier, document..." 
-                               class="w-full px-4 py-2 pl-10 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <div class="absolute left-3 top-2.5 text-gray-400">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Section notifications + profil -->
-                <div class="flex items-center space-x-4">
-                    <!-- Bouton recherche mobile -->
-                    <button id="mobileSearchBtn" class="md:hidden text-gray-600">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                        </svg>
-                    </button>
-                    
-                    <!-- Notifications -->
-                    <div class="relative">
-                        <button id="notificationsBtn" class="relative p-1 text-gray-600 hover:text-blue-900 focus:outline-none">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-                            </svg>
-                            <span id="notificationBadge" class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
-                        </button>
-                        
-                        <!-- Dropdown notifications -->
-                        <div id="notificationsDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white shadow-xl rounded-lg border border-gray-200 z-50">
-                            <div class="p-4 border-b">
-                                <h3 class="font-semibold text-gray-800">Notifications</h3>
-                            </div>
-                            <div class="max-h-96 overflow-y-auto">
-                                <div class="p-3 border-b hover:bg-gray-50">
-                                    <div class="flex justify-between">
-                                        <span class="text-sm font-medium text-gray-800">Nouveau document</span>
-                                        <span class="text-xs text-gray-500">Il y a 10 min</span>
-                                    </div>
-                                    <p class="text-sm text-gray-600 mt-1">Plan implantation VRD ajouté au chantier ZAC Les Hauts</p>
-                                </div>
-                                <div class="p-3 border-b hover:bg-gray-50">
-                                    <div class="flex justify-between">
-                                        <span class="text-sm font-medium text-gray-800">Alerte chantier</span>
-                                        <span class="text-xs text-gray-500">Il y a 1h</span>
-                                    </div>
-                                    <p class="text-sm text-gray-600 mt-1">2 retards signalés sur le chantier Résidence du Parc</p>
-                                </div>
-                                <div class="p-3 hover:bg-gray-50">
-                                    <div class="flex justify-between">
-                                        <span class="text-sm font-medium text-gray-800">Validation requise</span>
-                                        <span class="text-xs text-gray-500">Il y a 2h</span>
-                                    </div>
-                                    <p class="text-sm text-gray-600 mt-1">5 documents en attente de votre validation</p>
-                                </div>
-                            </div>
-                            <div class="p-3 border-t text-center">
-                                <a href="#" class="text-sm text-blue-900 font-medium hover:text-blue-700">Voir toutes les notifications</a>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Avatar utilisateur -->
-                    <div class="relative">
-                        <button id="userMenuBtn" class="flex items-center space-x-2 focus:outline-none">
-                            <div class="w-8 h-8 rounded-full bg-blue-900 flex items-center justify-center">
-                                <span class="text-white font-medium text-sm">PM</span>
-                            </div>
-                            <span class="hidden md:inline text-sm font-medium">Pierre Martin</span>
-                            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </button>
-                        
-                        <!-- Dropdown utilisateur -->
-                        <div id="userDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white shadow-xl rounded-lg border border-gray-200 z-50">
-                            <div class="p-4 border-b">
-                                <p class="font-medium text-gray-800">Pierre Martin</p>
-                                <p class="text-sm text-gray-600">Chef de projet</p>
-                            </div>
-                            <div class="py-2">
-                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mon profil</a>
-                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Paramètres</a>
-                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Aide</a>
-                            </div>
-                            <div class="border-t py-2">
-                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Déconnexion</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Barre recherche mobile (cachée par défaut) -->
-            <div id="mobileSearchBar" class="md:hidden px-4 pb-3 hidden">
-                <div class="relative">
-                    <input type="text" 
-                           placeholder="Rechercher un chantier, document..." 
-                           class="w-full px-4 py-2 pl-10 bg-gray-100 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <div class="absolute left-3 top-2.5 text-gray-400">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                        </svg>
-                    </div>
-                </div>
-            </div>
-        </header>
-        
-        <!-- Sidebar navigation -->
-        <aside id="sidebar" class="sidebar-transition bg-white shadow-sm w-64 min-h-screen pt-16 fixed md:relative md:block hidden md:transform-none transform -translate-x-full md:translate-x-0 z-40">
-            <nav class="p-4 custom-scrollbar" style="max-height: calc(100vh - 4rem); overflow-y: auto;">
-                <ul class="space-y-1">
-                    <li>
-                        <a href="#" class="flex items-center px-4 py-3 bg-blue-50 text-blue-900 font-medium rounded-lg">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                            </svg>
-                            Tableau de bord
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                            </svg>
-                            Mes Chantiers
-                            <span class="ml-auto w-6 h-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                            </svg>
-                            Documents
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            Validations
-                            <span class="ml-auto w-6 h-6 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center">5</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                            </svg>
-                            Photos
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                            </svg>
-                            Planning
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#" class="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                            </svg>
-                            Paramètres
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-        </aside>
-        
-        <!-- Contenu principal -->
-        <main class="flex-1 pt-16 md:ml-0">
-            <!-- Zone dashboard -->
-            <div id="dashboardView" class="p-4 md:p-8">
-                <!-- Section 1: En-tête dashboard -->
-                <div class="flex flex-col md:flex-row md:items-center justify-between mb-8">
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-900">Tableau de bord</h2>
-                        <p id="currentDate" class="text-gray-600 mt-1">Chargement...</p>
-                    </div>
-                    
-                    <div class="flex flex-wrap gap-3 mt-4 md:mt-0">
-                        <!-- Dropdown filtre -->
-                        <div class="relative">
-                            <button id="filterBtn" class="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
-                                </svg>
-                                Filtrer
-                                <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                </svg>
-                            </button>
-                            
-                            <div id="filterDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white shadow-xl rounded-lg border border-gray-200 z-50">
-                                <div class="py-1">
-                                    <button class="filter-option block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-filter="all">Tous les chantiers</button>
-                                    <button class="filter-option block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-filter="late">En retard</button>
-                                    <button class="filter-option block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-filter="risk">À risque</button>
-                                    <button class="filter-option block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-filter="validated">Validés</button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Bouton nouveau chantier -->
-                        <button id="newProjectBtn" class="flex items-center px-4 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                            </svg>
-                            Nouveau chantier
-                        </button>
-                        
-                        <!-- Bouton exporter -->
-                        <button id="exportBtn" class="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
-                            </svg>
-                            Exporter
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Section 2: Cartes chantiers actifs -->
-                <div class="mb-10">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Chantiers actifs</h3>
-                    <div id="projectCards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <!-- Cartes seront générées dynamiquement -->
-                    </div>
-                </div>
-                
-                <!-- Alertes prioritaires et Photos récentes côte à côte -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-                    <!-- Section 3: Alertes prioritaires -->
-                    <div>
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-semibold text-gray-900">Alertes prioritaires</h3>
-                            <span id="alertCount" class="bg-gray-100 text-gray-800 text-sm font-medium px-3 py-1 rounded-full">3 alertes</span>
-                        </div>
-                        
-                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-                            <div id="alertsList" class="divide-y divide-gray-100">
-                                <!-- Alertes seront générées dynamiquement -->
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Section 4: Photos récentes terrain -->
-                    <div>
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-semibold text-gray-900">Photos récentes</h3>
-                            <a href="#" class="text-sm text-blue-900 font-medium hover:text-blue-700">Voir tout</a>
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-4">
-                            <!-- Photos seront générées dynamiquement -->
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Validations en attente et Documents récents côte à côte -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <!-- Section 5: Validations en attente -->
-                    <div>
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-semibold text-gray-900">Validations en attente (5)</h3>
-                        </div>
-                        
-                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                    <thead class="bg-gray-50">
-                                        <tr>
-                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document</th>
-                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Demandeur</th>
-                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="validationsTable" class="bg-white divide-y divide-gray-200">
-                                        <!-- Lignes seront générées dynamiquement -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Section 6: Documents récents -->
-                    <div>
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-semibold text-gray-900">Documents récents</h3>
-                        </div>
-                        
-                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-                            <div id="documentsList" class="divide-y divide-gray-100">
-                                <!-- Documents seront générées dynamiquement -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Vue détail chantier (cachée par défaut) -->
-            <div id="projectDetailView" class="hidden p-4 md:p-8">
-                <!-- Barre navigation chantier -->
-                <div class="flex items-center mb-6">
-                    <button id="backToDashboardBtn" class="flex items-center text-blue-900 hover:text-blue-700 mr-4">
-                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                        </svg>
-                        Retour
-                    </button>
-                    <h2 id="projectDetailTitle" class="text-2xl font-bold text-gray-900">Détail chantier</h2>
-                </div>
-                
-                <!-- Onglets chantier -->
-                <div class="border-b border-gray-200 mb-6">
-                    <nav class="flex space-x-8 overflow-x-auto">
-                        <button class="project-tab active py-3 px-1 text-sm font-medium text-blue-900 border-b-2 border-blue-900">Général</button>       
-                        <button class="project-tab py-3 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300">Planning</button>                 
-                        <button class="project-tab py-3 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300">Discussions</button>
-                        <button class="project-tab py-3 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300">Documents</button>
-                        <button class="project-tab py-3 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300">Photos</button>
-                        <button class="project-tab py-3 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300">Tâches</button>
-                        <button class="project-tab py-3 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300">Signalements</button>
-                        <button class="project-tab py-3 px-1 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300">Equipe</button>
-                    </nav>
-                </div>
-                
-                <!-- Contenu selon onglet actif -->
-                <div id="projectTabContent">
-                    <!-- Onglet Général -->
-                    <div class="project-tab-content active">
-                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                                <div class="md:col-span-2">
-                                    <h3 class="text-lg font-semibold text-gray-900 mb-2" id="projectName">ZAC Les Hauts</h3>
-                                    <p class="text-gray-600 mb-4" id="projectAddress">📍 12 Rue Construction, Lyon 7</p>
-                                    <p class="text-gray-700" id="projectDescription">Chantier de voirie et réseaux divers (VRD) pour la nouvelle ZAC des Hauts de Lyon. Travaux d'infrastructure complète.</p>
-                                </div>
-                                <div class="bg-gray-50 rounded-lg p-4">
-                                    <h4 class="font-medium text-gray-900 mb-2">Informations clés</h4>
-                                    <div class="space-y-2">
-                                        <div class="flex justify-between">
-                                            <span class="text-gray-600">Date début :</span>
-                                            <span class="font-medium" id="projectStartDate">15/02/2023</span>
-                                        </div>
-                                        <div class="flex justify-between">
-                                            <span class="text-gray-600">Date fin prévue :</span>
-                                            <span class="font-medium" id="projectEndDate">30/11/2023</span>
-                                        </div>
-                                        <div class="flex justify-between">
-                                            <span class="text-gray-600">Budget :</span>
-                                            <span class="font-medium" id="projectBudget">€2,450,000</span>
-                                        </div>
-                                        <div class="flex justify-between">
-                                            <span class="text-gray-600">Statut :</span>
-                                            <span id="projectStatus" class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">En cours</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-6">
-                                <div class="flex justify-between mb-2">
-                                    <span class="text-sm font-medium text-gray-700">Avancement</span>
-                                    <span id="projectProgressText" class="text-sm font-medium text-gray-900">65%</span>
-                                </div>
-                                <div class="w-full bg-gray-200 rounded-full h-2.5">
-                                    <div id="projectProgressBar" class="progress-bar h-2.5 rounded-full" style="--progress: 65%; width: 65%;"></div>
-                                </div>
-                            </div>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div class="bg-blue-50 rounded-lg p-4">
-                                    <div class="flex items-center">
-                                        <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mr-3">
-                                            <svg class="w-5 h-5 text-blue-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.698-.833-2.464 0L4.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                                            </svg>
-                                        </div>
-                                        <div>
-                                            <p class="text-sm text-gray-600">Alertes actives</p>
-                                            <p id="projectAlerts" class="text-xl font-bold text-gray-900">2</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="bg-green-50 rounded-lg p-4">
-                                    <div class="flex items-center">
-                                        <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center mr-3">
-                                            <svg class="w-5 h-5 text-green-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                            </svg>
-                                        </div>
-                                        <div>
-                                            <p class="text-sm text-gray-600">Photos récentes</p>
-                                            <p id="projectPhotos" class="text-xl font-bold text-gray-900">15</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="bg-purple-50 rounded-lg p-4">
-                                    <div class="flex items-center">
-                                        <div class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center mr-3">
-                                            <svg class="w-5 h-5 text-purple-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                            </svg>
-                                        </div>
-                                        <div>
-                                            <p class="text-sm text-gray-600">Documents</p>
-                                            <p id="projectDocuments" class="text-xl font-bold text-gray-900">42</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Autres onglets (cachés) -->  
-                    <div class="project-tab-content hidden">
-                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                            <p class="text-gray-600">Contenu de l'onglet Planning. À développer.</p>
-                        </div>
-                    </div>                   
-                    <div class="project-tab-content hidden">
-                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                            <p class="text-gray-600">Contenu de l'onglet Discussions. À développer.</p>
-                        </div>
-                    </div>
-                    <div class="project-tab-content hidden">
-                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                            <p class="text-gray-600">Contenu de l'onglet Documents. À développer.</p>
-                        </div>
-                    </div>
-                    <div class="project-tab-content hidden">
-                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                            <p class="text-gray-600">Contenu de l'onglet Photos. À développer.</p>
-                        </div>
-                    </div>
-                    <div class="project-tab-content hidden">
-                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                            <p class="text-gray-600">Contenu de l'onglet Tâches. À développer.</p>
-                        </div>
-                    </div>
-                    <div class="project-tab-content hidden">
-                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                            <p class="text-gray-600">Contenu de l'onglet Signalements. À développer.</p>
-                        </div>
-                    </div>
-                    <div class="project-tab-content hidden">
-                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                            <p class="text-gray-600">Contenu de l'onglet Equipe. À développer.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-    
-    <!-- FAB (Floating Action Button) -->
-    <button id="fabBtn" class="fixed bottom-6 right-6 w-14 h-14 bg-blue-900 text-white rounded-full shadow-lg hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 z-40 flex items-center justify-center">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+<body>
+
+  <!-- TOPBAR CONTACT -->
+  <div class="topbar" role="complementary" aria-label="Informations de contact">
+    <div class="container topbar__inner">
+      <a href="tel:+33605861840" class="topbar__item" aria-label="Téléphone : 06 05 86 18 40">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.47 11.47 0 003.59.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.01l-2.2 2.21z" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-    </button>
-    
-    <!-- Modal FAB -->
-    <div id="fabModal" class="modal-transition hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6 fade-in">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold text-gray-900">Ajouter un élément</h3>
-                <button id="closeFabModalBtn" class="text-gray-400 hover:text-gray-600">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-            
-            <div class="space-y-3">
-                <button class="fab-option flex items-center w-full p-3 text-left rounded-lg hover:bg-gray-100">
-                    <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mr-3">
-                        <svg class="w-5 h-5 text-blue-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2 . . ."></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <p class="font-medium text-gray-900">Importer un fichier</p>
-                        <p class="text-sm text-gray-600">Ajouter un document depuis votre ordinateur</p>
-                    </div>
-                </button>
-                
-                <button class="fab-option flex items-center w-full p-3 text-left rounded-lg hover:bg-gray-100">
-                    <div class="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center mr-3">
-                        <svg class="w-5 h-5 text-orange-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <p class="font-medium text-gray-900">Prendre/uploader photo</p>
-                        <p class="text-sm text-gray-600">Prendre une photo ou en importer une</p>
-                    </div>
-                </button>
-                
-                <button class="fab-option flex items-center w-full p-3 text-left rounded-lg hover:bg-gray-100">
-                    <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center mr-3">
-                        <svg class="w-5 h-5 text-green-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <p class="font-medium text-gray-900">Créer document texte</p>
-                        <p class="text-sm text-gray-600">Rédiger un nouveau document</p>
-                    </div>
-                </button>
-                
-                <button class="fab-option flex items-center w-full p-3 text-left rounded-lg hover:bg-gray-100">
-                    <div class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center mr-3">
-                        <svg class="w-5 h-5 text-purple-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <p class="font-medium text-gray-900">Ajouter lien externe</p>
-                        <p class="text-sm text-gray-600">Partager un lien vers une ressource externe</p>
-                    </div>
-                </button>
-            </div>
-        </div>
+        <span class="topbar__label">06 05 86 18 40</span>
+      </a>
+      <span class="topbar__sep" aria-hidden="true"></span>
+      <a href="mailto:anarouz.contact01@gmail.com" class="topbar__item" aria-label="Email : anarouz.contact01@gmail.com">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.75"/>
+          <path d="M2 7l10 7 10-7" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+        </svg>
+        <span class="topbar__label">anarouz.contact01@gmail.com</span>
+      </a>
+      <span class="topbar__sep" aria-hidden="true"></span>
+      <a href="https://www.linkedin.com/in/badreddine-hamya-268321a9" target="_blank" rel="noopener noreferrer" class="topbar__item" aria-label="LinkedIn de Badreddine Hamya">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="2" y="2" width="20" height="20" rx="4" stroke="currentColor" stroke-width="1.75"/>
+          <path d="M7 10v7M7 7v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M11 17v-4a2 2 0 014 0v4M11 10v7" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+        </svg>
+        <span class="topbar__label">LinkedIn</span>
+      </a>
     </div>
-    
-    <!-- Modal Ajout Document -->
-    <div id="documentModal" class="modal-transition hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 fade-in">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-lg font-semibold text-gray-900">Importer un document</h3>
-                <button id="closeDocumentModalBtn" class="text-gray-400 hover:text-gray-600">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-            
-            <form id="documentForm">
-                <div class="space-y-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Type de document</label>
-                        <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                            <option value="">Sélectionner un type</option>
-                            <option value="plan">Plan</option>
-                            <option value="report">Rapport</option>
-                            <option value="estimate">Devis</option>
-                            <option value="invoice">Facture</option>
-                            <option value="other">Autre</option>
-                        </select>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Fichier</label>
-                        <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:bg-gray-50 transition-colors">
-                            <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                            </svg>
-                            <p class="text-gray-600 mb-2">Glissez-déposez un fichier ici ou cliquez pour parcourir</p>
-                            <p class="text-sm text-gray-500">PDF, DOC, XLS, JPG jusqu'à 10MB</p>
-                            <input type="file" class="hidden" id="fileInput">
-                        </div>
-                        <div id="fileInfo" class="hidden mt-4 p-3 bg-green-50 rounded-lg">
-                            <div class="flex items-center">
-                                <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                <span id="fileName" class="text-green-800 font-medium"></span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Chantier associé</label>
-                        <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                            <option value="">Sélectionner un chantier</option>
-                            <option value="1">ZAC Les Hauts</option>
-                            <option value="2">Résidence du Parc</option>
-                            <option value="3">Centre commercial Les Portes</option>
-                        </select>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Description (optionnel)</label>
-                        <textarea rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Ajoutez une description du document..."></textarea>
-                    </div>
-                </div>
-                
-                <div class="flex justify-end space-x-3 mt-8">
-                    <button type="button" id="cancelDocumentBtn" class="px-5 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        Annuler
-                    </button>
-                    <button type="submit" class="px-5 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                        Ajouter le document
-                    </button>
-                </div>
-            </form>
+  </div>
+
+  <!-- NAVIGATION -->
+  <header class="header" role="banner">
+    <nav class="nav container" aria-label="Navigation principale">
+      <a href="index.html" class="nav__logo" aria-label="Anarouz — Retour à l'accueil">
+        <span class="nav__logo-text">Anarouz</span>
+      </a>
+
+      <button class="nav__toggle" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="nav-menu">
+        <span class="nav__toggle-bar"></span>
+        <span class="nav__toggle-bar"></span>
+        <span class="nav__toggle-bar"></span>
+      </button>
+
+      <ul class="nav__menu" id="nav-menu" role="list">
+        <li><a href="#services" class="nav__link">Services</a></li>
+        <li><a href="#projets" class="nav__link">Projets</a></li>
+        <li><a href="about.html" class="nav__link">À propos</a></li>
+        <li><a href="services.html" class="nav__link">Offres détaillées</a></li>
+        <li><a href="contact.html" class="btn btn--primary btn--sm">Discuter de votre projet</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main-content">
+
+    <!-- ===================== HERO ===================== -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero__bg" aria-hidden="true"></div>
+      <div class="container hero__content hero__content--split">
+        <div class="hero__text">
+        <div class="hero__badge">
+          <span>Développement Web &middot; SIG &middot; Data &amp; IA</span>
         </div>
-    </div>
-    
-    <!-- Modal Export -->
-    <div id="exportModal" class="modal-transition hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6 fade-in">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-lg font-semibold text-gray-900">Exporter les données</h3>
-                <button id="closeExportModalBtn" class="text-gray-400 hover:text-gray-600">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-            
-            <div class="space-y-4">
-                <div class="p-4 bg-blue-50 rounded-lg">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <svg class="w-5 h-5 text-blue-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm text-blue-900">L'export va générer un rapport PDF contenant toutes les données visibles dans le tableau de bord.</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Période</label>
-                    <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <option value="all">Toutes les données</option>
-                        <option value="month">30 derniers jours</option>
-                        <option value="week">7 derniers jours</option>
-                        <option value="today">Aujourd'hui</option>
-                    </select>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Format</label>
-                    <div class="grid grid-cols-2 gap-3">
-                        <label class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                            <input type="radio" name="exportFormat" value="pdf" checked class="h-4 w-4 text-blue-900 focus:ring-blue-500">
-                            <div class="ml-3">
-                                <p class="font-medium text-gray-900">PDF</p>
-                                <p class="text-sm text-gray-500">Pour impression</p>
-                            </div>
-                        </label>
-                        <label class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                            <input type="radio" name="exportFormat" value="excel" class="h-4 w-4 text-blue-900 focus:ring-blue-500">
-                            <div class="ml-3">
-                                <p class="font-medium text-gray-900">Excel</p>
-                                <p class="text-sm text-gray-500">Pour analyse</p>
-                            </div>
-                        </label>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="flex justify-end space-x-3 mt-8">
-                <button type="button" id="cancelExportBtn" class="px-5 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    Annuler
-                </button>
-                <button type="button" id="confirmExportBtn" class="px-5 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                    Générer l'export
-                </button>
-            </div>
+        <h1 class="hero__title" id="hero-title">
+          Exploitez la puissance<br>
+          <span class="hero__title--accent">de vos données</span><br>
+          pour mieux décider
+        </h1>
+        <p class="hero__subtitle">
+          Nous concevons des solutions web et géospatiales sur mesure pour transformer vos données complexes en outils stratégiques performants — et générer un impact concret sur votre activité.
+        </p>
+        <div class="hero__actions">
+          <a href="contact.html" class="btn btn--primary btn--lg">
+            Discuter de votre projet
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M4 10h12M10 4l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
+          <a href="contact.html#audit" class="btn btn--outline btn--lg">Obtenir un audit gratuit</a>
         </div>
+        </div><!-- /.hero__text -->
+        <div class="hero__visual" aria-hidden="false">
+          <picture>
+            <source srcset="assets/images/expertise-400.webp" media="(max-width: 480px)" type="image/webp" />
+            <source srcset="assets/images/expertise-800.webp" media="(max-width: 1024px)" type="image/webp" />
+            <img src="assets/images/expertise-1200.webp"
+                 alt="Plateforme géospatiale urbaine — solution SIG et data développée par Anarouz pour la visualisation territoriale"
+                 title="Plateforme SIG urbaine — Anarouz"
+                 class="hero__visual-img"
+                 width="600" height="450"
+                 loading="eager"
+                 fetchpriority="high" />
+          </picture>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== CLIENTS ===================== -->
+    <section class="clients" aria-label="Références clients">
+      <div class="container">
+        <p class="clients__label">Ils nous ont fait confiance</p>
+        <div class="clients__logos" role="list">
+          <figure class="clients__logo" role="listitem" data-tooltip="Geoptis — SaaS de Géomarketing">
+            <img src="assets/images/geoptis.webp"
+                 alt="Logo Geoptis, client Anarouz — plateforme SaaS de géomarketing et intelligence géospatiale"
+                 title="Geoptis — SaaS de Géomarketing"
+                 class="clients__logo-img" height="64" loading="lazy" />
+          </figure>
+          <figure class="clients__logo" role="listitem" data-tooltip="PTV France — Optimisation cartographique & mobilité">
+            <img src="assets/images/ptvgroup.webp"
+                 alt="Logo PTV France, client Anarouz — solutions d'optimisation cartographique et de mobilité"
+                 title="PTV France — Optimisation cartographique & mobilité"
+                 class="clients__logo-img" height="64" loading="lazy" />
+          </figure>
+          <figure class="clients__logo" role="listitem" data-tooltip="ESRI France — Leader des solutions SIG">
+            <img src="assets/images/esri.webp"
+                 alt="Logo ESRI France, client Anarouz — leader mondial des systèmes d'information géographique"
+                 title="ESRI France — Leader des solutions SIG"
+                 class="clients__logo-img" height="64" loading="lazy" />
+          </figure>
+          <figure class="clients__logo" role="listitem" data-tooltip="Magellium — Applications SIG secteur public">
+            <img src="assets/images/magellium.webp"
+                 alt="Logo Magellium, client Anarouz — développement d'applications SIG critiques pour le secteur public"
+                 title="Magellium — Applications SIG secteur public"
+                 class="clients__logo-img" height="64" loading="lazy" />
+          </figure>
+          <figure class="clients__logo" role="listitem" data-tooltip="SFR — Télécommunications">
+            <img src="assets/images/sfr.webp"
+                 alt="Logo SFR, client Anarouz — opérateur télécommunications et solutions numériques"
+                 title="SFR — Télécommunications"
+                 class="clients__logo-img" height="64" loading="lazy" />
+          </figure>
+          <figure class="clients__logo" role="listitem" data-tooltip="Institut Paris Région — Aménagement territorial">
+            <img src="assets/images/ipr.webp"
+                 alt="Logo Institut Paris Région, client Anarouz — organisme d'études et d'aménagement territorial en Île-de-France"
+                 title="Institut Paris Région — Aménagement territorial"
+                 class="clients__logo-img" height="64" loading="lazy" />
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== PROBLÈME ===================== -->
+    <section class="section section--light section--full" id="probleme" aria-labelledby="probleme-title">
+      <div class="container">
+        <div class="section__header">
+          <p class="section__tag">Le constat</p>
+          <h2 class="section__title" id="probleme-title">
+            Vos données sont une richesse inexploitée
+          </h2>
+          <p class="section__subtitle">
+            De nombreuses entreprises et collectivités accumulent des données — mais peinent à en extraire une valeur stratégique concrète.
+          </p>
+        </div>
+
+        <div class="problems-grid">
+          <article class="problem-card animate-in" aria-label="Données complexes et dispersées">
+            <div class="problem-card__icon" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                <rect x="3" y="3" width="22" height="22" rx="3" stroke="#00d3b7" stroke-width="1.75"/>
+                <path d="M8 14h12M8 9.5h8M8 18.5h6" stroke="#00d3b7" stroke-width="1.75" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3 class="problem-card__title">Données complexes et dispersées</h3>
+            <p class="problem-card__text">Vos données sont réparties entre plusieurs systèmes et formats, sans vue unifiée ni exploitable pour vos équipes.</p>
+          </article>
+
+          <article class="problem-card animate-in" aria-label="Outils peu adaptés">
+            <div class="problem-card__icon" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                <circle cx="14" cy="14" r="11" stroke="#00d3b7" stroke-width="1.75"/>
+                <path d="M9 14l4 4 6-7" stroke="#00d3b7" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h3 class="problem-card__title">Outils peu adaptés à vos métiers</h3>
+            <p class="problem-card__text">Les solutions génériques ne couvrent pas vos cas d'usage spécifiques, créant des frictions et des pertes de productivité.</p>
+          </article>
+
+          <article class="problem-card animate-in" aria-label="Manque de visualisation stratégique">
+            <div class="problem-card__icon" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                <rect x="3" y="3" width="22" height="22" rx="2" stroke="#00d3b7" stroke-width="1.75"/>
+                <path d="M3 21l6-7 5 5 8-10" stroke="#00d3b7" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h3 class="problem-card__title">Manque de visualisation stratégique</h3>
+            <p class="problem-card__text">Sans interfaces dédiées, vos données restent illisibles et vos décisions reposent sur l'intuition plutôt que sur les faits.</p>
+          </article>
+        </div>
+
+        <p class="problems-result">
+          <strong>Résultat :</strong> des cycles de décision allongés, des opportunités manquées et des équipes sous-performantes.
+        </p>
+      </div>
+    </section>
+
+    <!-- ===================== SOLUTION ===================== -->
+    <section class="section section--dark section--full" id="solution" aria-labelledby="solution-title">
+      <div class="container">
+        <div class="section__header section__header--light">
+          <p class="section__tag section__tag--light">Notre réponse</p>
+          <h2 class="section__title section__title--light" id="solution-title">
+            Des solutions digitales sur mesure,<br>orientées résultats business
+          </h2>
+          <p class="section__subtitle section__subtitle--light">
+            Nous développons des outils adaptés à vos enjeux métiers pour rendre vos données accessibles, exploitables et stratégiques.
+          </p>
+        </div>
+
+        <div class="solutions-grid">
+          <div class="solution-item animate-in">
+            <div class="solution-item__number" aria-hidden="true">01</div>
+            <div class="solution-item__content">
+              <h3 class="solution-item__title">Applications web performantes</h3>
+              <p class="solution-item__text">Des plateformes métiers robustes, évolutives et parfaitement intégrées à vos systèmes existants.</p>
+            </div>
+          </div>
+          <div class="solution-item animate-in">
+            <div class="solution-item__number" aria-hidden="true">02</div>
+            <div class="solution-item__content">
+              <h3 class="solution-item__title">Plateformes SIG interactives</h3>
+              <p class="solution-item__text">Des outils de cartographie et d'analyse spatiale pour visualiser et exploiter vos données géographiques.</p>
+            </div>
+          </div>
+          <div class="solution-item animate-in">
+            <div class="solution-item__number" aria-hidden="true">03</div>
+            <div class="solution-item__content">
+              <h3 class="solution-item__title">Dashboards de data visualisation</h3>
+              <p class="solution-item__text">Des interfaces claires et intuitives pour transformer vos données brutes en insights actionnables et décisions éclairées.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== SERVICES ===================== -->
+    <section class="section section--full" id="services" aria-labelledby="services-title">
+      <div class="container">
+        <div class="section__header">
+          <p class="section__tag">Nos expertises</p>
+          <h2 class="section__title" id="services-title">
+            Quatre domaines d'expertise<br>pour accélérer votre transformation
+          </h2>
+          <p class="section__subtitle">
+            Une double compétence SIG + web, couplée à une approche orientée impact business — pas uniquement technique.
+          </p>
+        </div>
+
+        <div class="services-grid">
+
+          <article class="service-card animate-in" aria-labelledby="service-web">
+            <div class="service-card__img-wrap">
+              <picture>
+                <source srcset="assets/images/dev_web-400.webp" media="(max-width: 480px)" type="image/webp" />
+                <source srcset="assets/images/dev_web-800.webp" media="(max-width: 900px)" type="image/webp" />
+                <img src="assets/images/dev_web-1200.webp"
+                     alt="Applications Web développées par Anarouz"
+                     title="Développement web — Anarouz"
+                     class="service-card__img"
+                     width="600" height="220"
+                     loading="lazy" />
+              </picture>
+            </div>
+            <div class="service-card__icon" aria-hidden="true">
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                <rect x="2" y="8" width="36" height="26" rx="3" stroke="#00d3b7" stroke-width="1.75"/>
+                <path d="M2 14h36" stroke="#00d3b7" stroke-width="1.75"/>
+                <circle cx="7" cy="11" r="1.5" fill="#00d3b7"/>
+                <circle cx="12" cy="11" r="1.5" fill="#00d3b7"/>
+                <circle cx="17" cy="11" r="1.5" fill="#00d3b7"/>
+                <path d="M10 23l5 4-5 4M21 31h9" stroke="#00d3b7" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h3 class="service-card__title" id="service-web">Développement Web</h3>
+            <p class="service-card__text">Applications web sur mesure, plateformes métiers et sites professionnels. Performance, scalabilité et expérience utilisateur au cœur de chaque projet.</p>
+            <ul class="service-card__features" aria-label="Ce qui est inclus">
+              <li>Sites web professionnels</li>
+              <li>Plateformes métiers évolutives</li>
+              <li>APIs &amp; intégrations</li>
+            </ul>
+            <a href="services.html#web" class="service-card__link" aria-label="En savoir plus sur le développement web">
+              En savoir plus
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M3 8h10M8 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </a>
+          </article>
+
+          <article class="service-card service-card--featured animate-in" aria-labelledby="service-sig">
+            <div class="service-card__img-wrap">
+              <picture>
+                <source srcset="assets/images/solutions_sig-400.webp" media="(max-width: 480px)" type="image/webp" />
+                <source srcset="assets/images/solutions_sig-800.webp" media="(max-width: 900px)" type="image/webp" />
+                <img src="assets/images/solutions_sig-1200.webp"
+                     alt="Visualisation de données géospatiales futuriste — solution SIG interactive développée par Anarouz"
+                     title="Intelligence géospatiale — Anarouz"
+                     class="service-card__img"
+                     width="600" height="220"
+                     loading="lazy" />
+              </picture>
+            </div>
+            <div class="service-card__badge">Expertise clé</div>
+            <div class="service-card__icon" aria-hidden="true">
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                <circle cx="20" cy="20" r="16" stroke="white" stroke-width="1.75"/>
+                <path d="M4 20h32M20 4v32" stroke="white" stroke-width="1.5" stroke-dasharray="3 3"/>
+                <path d="M7 12c4 2 8 3 13 2s9-4 13-2" stroke="white" stroke-width="1.5"/>
+                <path d="M6 28c4-2 9-3 14-2s10 3 14 2" stroke="white" stroke-width="1.5"/>
+                <circle cx="20" cy="20" r="3" fill="white"/>
+              </svg>
+            </div>
+            <h3 class="service-card__title" id="service-sig">Solutions SIG</h3>
+            <p class="service-card__text">Cartographie interactive, analyse spatiale et gestion territoriale. Exploitez vos données géospatiales pour prendre des décisions éclairées et pertinentes.</p>
+            <ul class="service-card__features" aria-label="Ce qui est inclus">
+              <li>Cartographie interactive web</li>
+              <li>Analyse spatiale avancée</li>
+              <li>Gestion &amp; pilotage territorial</li>
+            </ul>
+            <a href="services.html#sig" class="service-card__link service-card__link--light" aria-label="En savoir plus sur les solutions SIG">
+              En savoir plus
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M3 8h10M8 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </a>
+          </article>
+
+          <article class="service-card animate-in" aria-labelledby="service-data">
+            <div class="service-card__img-wrap">
+              <picture>
+                <source srcset="assets/images/Artificial_intelligence-400.webp" media="(max-width: 480px)" type="image/webp" />
+                <source srcset="assets/images/Artificial_intelligence-800.webp" media="(max-width: 900px)" type="image/webp" />
+                <img src="assets/images/Artificial_intelligence-1200.webp"
+                     alt="Intelligence artificielle et analyse de données — solution IA sur mesure développée par Anarouz"
+                     title="Data & Intelligence Artificielle — Anarouz"
+                     class="service-card__img"
+                     width="600" height="220"
+                     loading="lazy" />
+              </picture>
+            </div>
+            <div class="service-card__icon" aria-hidden="true">
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                <rect x="4" y="27" width="6" height="9" rx="1" fill="#00d3b7"/>
+                <rect x="14" y="19" width="6" height="17" rx="1" fill="#00d3b7" opacity="0.8"/>
+                <rect x="24" y="11" width="6" height="25" rx="1" fill="#00d3b7" opacity="0.6"/>
+                <rect x="34" y="5" width="3" height="31" rx="1" fill="#00d3b7" opacity="0.4"/>
+                <path d="M3 36h35" stroke="#001841" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3 class="service-card__title" id="service-data">Data &amp; Intelligence Artificielle</h3>
+            <p class="service-card__text">Dashboards, analyse de données et automatisation intelligente. Transformez vos données en avantages compétitifs mesurables et durables.</p>
+            <ul class="service-card__features" aria-label="Ce qui est inclus">
+              <li>Dashboards métiers</li>
+              <li>Analyse &amp; modélisation de données</li>
+              <li>Automatisation IA</li>
+            </ul>
+            <a href="services.html#data" class="service-card__link" aria-label="En savoir plus sur Data et IA">
+              En savoir plus
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M3 8h10M8 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </a>
+          </article>
+
+          <article class="service-card animate-in" aria-labelledby="service-consulting">
+            <div class="service-card__img-wrap">
+              <picture>
+                <source srcset="assets/images/consulting-400.webp" media="(max-width: 480px)" type="image/webp" />
+                <source srcset="assets/images/consulting-800.webp" media="(max-width: 900px)" type="image/webp" />
+                <img src="assets/images/consulting-1200.webp"
+                     alt="Visualisation de données géospatiales futuriste — solution SIG interactive développée par Anarouz"
+                     title="Intégration et consulting — Anarouz"
+                     class="service-card__img"
+                     width="600" height="220"
+                     loading="lazy" />
+              </picture>
+            </div>
+            <div class="service-card__icon" aria-hidden="true">
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                <rect x="3" y="3" width="14" height="14" rx="3" stroke="#00d3b7" stroke-width="1.75"/>
+                <rect x="23" y="3" width="14" height="14" rx="3" stroke="#00d3b7" stroke-width="1.75"/>
+                <rect x="3" y="23" width="14" height="14" rx="3" stroke="#00d3b7" stroke-width="1.75"/>
+                <rect x="23" y="23" width="14" height="14" rx="3" stroke="#00d3b7" stroke-width="1.75"/>
+                <path d="M17 10h6M10 17v6M30 17v6M17 30h6" stroke="#00d3b7" stroke-width="1.75" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3 class="service-card__title" id="service-consulting">Intégration &amp; Consulting</h3>
+            <p class="service-card__text">Audit technique, intégration de systèmes et conseil stratégique. Un accompagnement expert pour réussir votre transformation digitale.</p>
+            <ul class="service-card__features" aria-label="Ce qui est inclus">
+              <li>Audit technique &amp; stratégique</li>
+              <li>Intégration de systèmes</li>
+              <li>Accompagnement &amp; transfert de compétences</li>
+            </ul>
+            <a href="services.html#consulting" class="service-card__link" aria-label="En savoir plus sur l'intégration et le consulting">
+              En savoir plus
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M3 8h10M8 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </a>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== PROJETS ===================== -->
+    <section class="section section--light section--full" id="projets" aria-labelledby="projets-title">
+      <div class="container">
+        <div class="section__header">
+          <p class="section__tag">Réalisations</p>
+          <h2 class="section__title" id="projets-title">
+            Des résultats concrets<br>pour des clients exigeants
+          </h2>
+          <p class="section__subtitle">
+            Chaque projet est une réponse à un défi métier précis. Voici quelques exemples de valeur créée pour nos clients.
+          </p>
+        </div>
+
+        <div class="projects-grid">
+
+          <article class="project-card animate-in" aria-labelledby="project-geoptis">
+            <div class="project-card__thumb project-card__thumb--logo">
+              <img src="assets/images/geoptis.webp"
+                   alt="Logo Geoptis — client Anarouz, plateforme SaaS de géomarketing"
+                   title="Geoptis — SaaS de Géomarketing"
+                   loading="lazy" height="64" />
+              <span class="project-card__tag">SaaS de Géomarketing</span>
+            </div>
+            <h3 class="project-card__title" id="project-geoptis">Plateforme SIG scalable &amp; pilotage technique</h3>
+            <div class="project-card__body">
+              <div class="project-card__block">
+                <p class="project-card__label">Problème</p>
+                <p class="project-card__text">Architecture non structurée, difficulté à maintenir les applications et à encadrer une équipe en forte expansion.</p>
+              </div>
+              <div class="project-card__block">
+                <p class="project-card__label">Solution</p>
+                <p class="project-card__text">Architecture microservices scalable, pipelines géographiques structurés, bonnes pratiques et montée en compétences des équipes.</p>
+              </div>
+            </div>
+            <div class="project-card__results">
+              <span class="project-card__result">Scalabilité améliorée</span>
+              <span class="project-card__result">Cycles accélérés</span>
+              <span class="project-card__result">Risques réduits</span>
+            </div>
+          </article>
+
+          <article class="project-card animate-in" aria-labelledby="project-ptv">
+            <div class="project-card__thumb project-card__thumb--logo">
+              <img src="assets/images/ptvgroup.webp"
+                   alt="Logo PTV Group — client Anarouz, optimisation cartographique et mobilité"
+                   title="PTV France — Cartographie & mobilité"
+                   loading="lazy" height="64" />
+              <span class="project-card__tag">Performance / Full-stack</span>
+            </div>
+            <h3 class="project-card__title" id="project-ptv">Optimisation d'une plateforme cartographique critique</h3>
+            <div class="project-card__body">
+              <div class="project-card__block">
+                <p class="project-card__label">Problème</p>
+                <p class="project-card__text">Temps de réponse trop élevés sur des services critiques, processus manuels ralentissant l'exploitation des données.</p>
+              </div>
+              <div class="project-card__block">
+                <p class="project-card__label">Solution</p>
+                <p class="project-card__text">Refactoring backend, optimisation des requêtes, automatisation complète des flux d'import/export de données.</p>
+              </div>
+            </div>
+            <div class="project-card__results">
+              <span class="project-card__result project-card__result--highlight">−30% de temps de réponse</span>
+              <span class="project-card__result">Flux fiabilisés</span>
+              <span class="project-card__result">Productivité accrue</span>
+            </div>
+          </article>
+
+          <article class="project-card animate-in" aria-labelledby="project-esri">
+            <div class="project-card__thumb project-card__thumb--logo">
+              <img src="assets/images/esri.webp"
+                   alt="Logo ESRI France — client Anarouz, leader des systèmes d'information géographique"
+                   title="ESRI France — Solutions SIG"
+                   loading="lazy" height="64" />
+              <span class="project-card__tag">Data viz / SIG</span>
+            </div>
+            <h3 class="project-card__title" id="project-esri">Applications cartographiques sur mesure &amp; data viz</h3>
+            <div class="project-card__body">
+              <div class="project-card__block">
+                <p class="project-card__label">Problème</p>
+                <p class="project-card__text">Les outils standards ne couvraient pas les cas d'usage spécifiques, manque d'interfaces ergonomiques et interactives.</p>
+              </div>
+              <div class="project-card__block">
+                <p class="project-card__label">Solution</p>
+                <p class="project-card__text">Applications sur mesure, widgets métiers, visualisations avancées et transfert de compétences aux équipes internes.</p>
+              </div>
+            </div>
+            <div class="project-card__results">
+              <span class="project-card__result">Outils parfaitement adaptés</span>
+              <span class="project-card__result">Adoption facilitée</span>
+              <span class="project-card__result">Équipes autonomes</span>
+            </div>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== BÉNÉFICES ===================== -->
+    <section class="section section--full benefits-section" id="benefices" aria-labelledby="benefices-title">
+      <div class="container">
+        <div class="benefits-layout">
+          <div class="benefits-left">
+            <p class="section__tag section__tag--light">Pourquoi Anarouz</p>
+            <h2 class="section__title section__title--light" id="benefices-title">
+              Une expertise rare,<br>des résultats mesurables
+            </h2>
+            <p class="section__subtitle section__subtitle--light">
+              Nous combinons une double compétence SIG + web avec une approche orientée résultats — pas uniquement technique. Des solutions fiables, évolutives, conçues pour un impact concret.
+            </p>
+            <a href="contact.html" class="btn btn--primary btn--lg" style="margin-top: 1rem;">Démarrer votre projet</a>
+          </div>
+          <div class="benefits-right">
+            <div class="benefit-item animate-in">
+              <div class="benefit-item__icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                  <path d="M8 11l2.5 2.5 4-4M20 11a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#00d3b7" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="benefit-item__title">Meilleure prise de décision</h3>
+                <p class="benefit-item__text">Des données structurées et visualisées pour des décisions plus rapides et plus fiables.</p>
+              </div>
+            </div>
+            <div class="benefit-item animate-in">
+              <div class="benefit-item__icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                  <circle cx="11" cy="11" r="9" stroke="#00d3b7" stroke-width="1.75"/>
+                  <path d="M11 6v5l3.5 2" stroke="#00d3b7" stroke-width="1.75" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="benefit-item__title">Gain de temps significatif</h3>
+                <p class="benefit-item__text">Automatisation des tâches répétitives et optimisation des processus métiers clés.</p>
+              </div>
+            </div>
+            <div class="benefit-item animate-in">
+              <div class="benefit-item__icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                  <path d="M11 2L2 6.5l9 4.5 9-4.5L11 2zM2 15.5l9 4.5 9-4.5M2 11l9 4.5 9-4.5" stroke="#00d3b7" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="benefit-item__title">Automatisation des processus</h3>
+                <p class="benefit-item__text">Réduisez les erreurs humaines et libérez vos équipes pour des tâches à plus forte valeur ajoutée.</p>
+              </div>
+            </div>
+            <div class="benefit-item animate-in">
+              <div class="benefit-item__icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                  <rect x="2" y="2" width="18" height="18" rx="2" stroke="#00d3b7" stroke-width="1.75"/>
+                  <path d="M2 8h18M8 20V8" stroke="#00d3b7" stroke-width="1.75" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="benefit-item__title">Visualisation claire des données</h3>
+                <p class="benefit-item__text">Des interfaces intuitives qui rendent vos données compréhensibles par tous les profils métiers.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== CTA FINAL ===================== -->
+    <section class="section cta-section" aria-labelledby="cta-title">
+      <div class="container">
+        <div class="cta-box">
+          <div class="cta-box__content">
+            <h2 class="cta-box__title" id="cta-title">
+              Prêt à exploiter pleinement vos données ?
+            </h2>
+            <p class="cta-box__text">
+              Un premier échange gratuit pour identifier vos besoins et vous proposer la solution la plus adaptée à vos enjeux.
+            </p>
+            <div class="cta-box__actions">
+              <a href="contact.html" class="btn btn--primary btn--lg">
+                Discuter de votre projet
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path d="M4 10h12M10 4l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </a>
+              <a href="services.html" class="btn btn--ghost btn--lg">Voir nos services</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer class="footer" role="contentinfo">
+    <div class="container footer__inner">
+      <div class="footer__brand">
+        <a href="index.html" class="footer__logo" aria-label="Anarouz — Retour à l'accueil">Anarouz</a>
+        <p class="footer__tagline">Solutions web, SIG &amp; data sur mesure</p>
+      </div>
+      <nav class="footer__nav" aria-label="Navigation pied de page">
+        <div class="footer__nav-group">
+          <h4 class="footer__nav-title">Services</h4>
+          <ul class="footer__nav-list" role="list">
+            <li><a href="services.html#web" class="footer__nav-link">Développement Web</a></li>
+            <li><a href="services.html#sig" class="footer__nav-link">Solutions SIG</a></li>
+            <li><a href="services.html#data" class="footer__nav-link">Data &amp; IA</a></li>
+            <li><a href="services.html#consulting" class="footer__nav-link">Consulting</a></li>
+          </ul>
+        </div>
+        <div class="footer__nav-group">
+          <h4 class="footer__nav-title">Entreprise</h4>
+          <ul class="footer__nav-list" role="list">
+            <li><a href="about.html" class="footer__nav-link">À propos</a></li>
+            <li><a href="#projets" class="footer__nav-link">Nos projets</a></li>
+            <li><a href="contact.html" class="footer__nav-link">Contact</a></li>
+            <li><a href="contact.html#audit" class="footer__nav-link">Audit gratuit</a></li>
+          </ul>
+        </div>
+        <div class="footer__nav-group">
+          <h4 class="footer__nav-title">Contact</h4>
+          <ul class="footer__contact-list" role="list">
+            <li>
+              <a href="tel:+33605861840" class="footer__contact-item" aria-label="Appeler le 06 05 86 18 40">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.47 11.47 0 003.59.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.01l-2.2 2.21z" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                06 05 86 18 40
+              </a>
+            </li>
+            <li>
+              <a href="mailto:anarouz.contact01@gmail.com" class="footer__contact-item" aria-label="Envoyer un email">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.75"/><path d="M2 7l10 7 10-7" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>
+                anarouz.contact01@gmail.com
+              </a>
+            </li>
+            <li>
+              <a href="https://www.linkedin.com/in/badreddine-hamya-268321a9" target="_blank" rel="noopener noreferrer" class="footer__contact-item" aria-label="Profil LinkedIn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="4" stroke="currentColor" stroke-width="1.75"/><path d="M7 10v7M7 7v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M11 17v-4a2 2 0 014 0v4M11 10v7" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>
+                LinkedIn
+              </a>
+            </li>
+          </ul>
+        </div>
+      </nav>
     </div>
-    
-    <script src="js/data.js"></script>
-    <script src="js/utils.js"></script>
-    <script src="js/dashboard.js"></script>
-    <script src="js/discussions.js"></script>
-    <script src="js/documents.js"></script>
-    <script src="js/photos.js"></script>
-    <script src="js/planning.js"></script>
-    <script src="js/issues.js"></script>
-    <script src="js/issues-map.js"></script>
-    <script src="js/team.js"></script>
-    <script src="js/script.js"></script>
+    <div class="footer__bottom">
+      <div class="container">
+        <p class="footer__copy">
+          &copy; 2026 Anarouz. Tous droits réservés. —
+          <a href="services.html" class="footer__copy-link">Développement web sur mesure</a>,
+          <a href="services.html#sig" class="footer__copy-link">solutions SIG</a> &amp;
+          <a href="services.html#data" class="footer__copy-link">intelligence géospatiale</a>
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
 </body>
 </html>

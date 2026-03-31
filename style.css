@@ -937,7 +937,68 @@ h1, h2, h3, h4 { line-height: 1.12; font-weight: 700; letter-spacing: -.022em; }
 .service-detail__visual:hover img { transform: scale(1.03); }
 
 
-/* ── 31. SHOWCASE ───────────────────────────────────────── */
+/* ── 31. COOKIE BANNER ──────────────────────────────────── */
+#cookie-banner {
+  position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+  z-index: 9999; width: calc(100% - 3rem); max-width: 780px;
+  background: #ffffff; border-radius: var(--r-lg);
+  box-shadow: 0 8px 40px rgba(0,24,65,.18), 0 0 0 1px rgba(0,211,183,.18);
+  padding: 1.25rem 1.5rem;
+  opacity: 0; pointer-events: none;
+  transition: opacity .35s ease, transform .35s ease;
+  transform: translateX(-50%) translateY(12px);
+}
+#cookie-banner.cookie-banner--visible {
+  opacity: 1; pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+#cookie-banner.cookie-banner--hidden {
+  opacity: 0; pointer-events: none;
+  transform: translateX(-50%) translateY(12px);
+}
+.cookie-banner__inner {
+  display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
+}
+.cookie-banner__icon { font-size: 1.5rem; flex-shrink: 0; line-height: 1; }
+.cookie-banner__text { flex: 1; min-width: 220px; }
+.cookie-banner__text strong {
+  display: block; font-size: .9375rem; font-weight: 700;
+  color: var(--text-dk); margin-bottom: .3rem;
+}
+.cookie-banner__text p {
+  font-size: .825rem; color: var(--text-mt); line-height: 1.55; margin: 0;
+}
+.cookie-banner__actions {
+  display: flex; gap: .6rem; flex-shrink: 0; flex-wrap: wrap;
+}
+.cookie-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: .5rem 1.1rem; border-radius: 100px;
+  font-size: .8rem; font-weight: 700; cursor: pointer;
+  border: none; transition: opacity var(--ease), transform var(--ease);
+  white-space: nowrap;
+}
+.cookie-btn:hover { opacity: .85; transform: translateY(-1px); }
+.cookie-btn--accept {
+  background: var(--accent); color: var(--bg-dark);
+}
+.cookie-btn--refuse {
+  background: transparent; color: var(--text-mt);
+  border: 1.5px solid var(--border-lt);
+}
+.cookie-btn--refuse:hover { color: var(--text-dk); border-color: #ccc; }
+
+@media (max-width: 600px) {
+  #cookie-banner { bottom: 0; left: 0; right: 0; transform: none; width: 100%;
+    border-radius: var(--r-lg) var(--r-lg) 0 0; }
+  #cookie-banner.cookie-banner--visible  { transform: none; }
+  #cookie-banner.cookie-banner--hidden   { transform: translateY(12px); }
+  .cookie-banner__inner { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .cookie-banner__actions { width: 100%; justify-content: flex-end; }
+}
+
+
+/* ── 32. SHOWCASE ───────────────────────────────────────── */
 .showcase-section { padding: 0 0 var(--sp-3xl); background: var(--bg-light); }
 .showcase-placeholder {
   height: 420px; display: flex; flex-direction: column;

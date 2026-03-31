@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>À Propos d'Anarouz — Notre Mission, Valeurs & Expertise | Anarouz</title>
+  <meta name="description" content="Découvrez Anarouz : fondée en 2025, notre mission est de transformer la complexité technologique en solutions simples et puissantes. Expertise en développement web, SIG et Data/IA." />
+  <meta name="keywords" content="à propos Anarouz, mission entreprise, valeurs digitales, expertise SIG, développement web sur mesure, intelligence géospatiale" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://anarouz01.github.io/about.html" />
+
+  <meta property="og:title" content="À Propos d'Anarouz — Notre Mission & Valeurs" />
+  <meta property="og:description" content="Fondée en 2025, Anarouz combine expertise technique et vision stratégique pour créer des solutions web, SIG et data qui résolvent des problèmes réels." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://anarouz01.github.io/about.html" />
+  <meta property="og:locale" content="fr_FR" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Anarouz",
+    "url": "https://anarouz01.github.io/",
+    "foundingDate": "2025",
+    "description": "Anarouz combine expertise technique et vision stratégique pour créer des solutions web, SIG et data qui résolvent des problèmes réels.",
+    "knowsAbout": ["développement web", "SIG", "intelligence géospatiale", "data visualisation", "intelligence artificielle"],
+    "areaServed": "France"
+  }
+  </script>
+
+  <style>
+    /* ── Styles spécifiques à la page about ─────────────────── */
+
+    /* Mission layout */
+    .mission-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--sp-2xl);
+      align-items: start;
+    }
+    .mission-left { position: sticky; top: calc(var(--nav-h) + 2rem); }
+
+    .mission-intro {
+      font-size: clamp(1.0625rem, 1.6vw, 1.25rem);
+      color: var(--text-2);
+      line-height: 1.8;
+      margin-bottom: var(--sp-lg);
+    }
+    .mission-intro strong {
+      color: var(--text-1);
+      font-weight: 600;
+    }
+
+    .mission-body {
+      font-size: 1rem;
+      color: var(--text-2);
+      line-height: 1.85;
+    }
+
+    /* Stat pillars */
+    .mission-stats {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-md);
+      margin-top: var(--sp-xl);
+    }
+    .mission-stat {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-md);
+      padding: var(--sp-md) var(--sp-lg);
+      background: rgba(0,211,183,.07);
+      border: 1px solid rgba(0,211,183,.18);
+      border-radius: var(--r-md);
+      transition: background var(--ease), border-color var(--ease);
+    }
+    .mission-stat:hover {
+      background: rgba(0,211,183,.12);
+      border-color: rgba(0,211,183,.32);
+    }
+    .mission-stat__number {
+      font-size: 2rem;
+      font-weight: 900;
+      letter-spacing: -.04em;
+      background: linear-gradient(135deg, var(--indigo-light) 0%, var(--teal-light) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      flex-shrink: 0;
+      min-width: 4.5rem;
+    }
+    .mission-stat__label {
+      font-size: .9375rem;
+      color: var(--text-2);
+      line-height: 1.45;
+    }
+
+    /* Timeline / history */
+    .history-block {
+      padding: var(--sp-lg);
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 var(--r-md) var(--r-md) 0;
+      margin-top: var(--sp-xl);
+    }
+    .history-block__year {
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--indigo-light);
+      margin-bottom: .5rem;
+    }
+    .history-block__text {
+      font-size: .9375rem;
+      color: var(--text-2);
+      line-height: 1.75;
+    }
+
+    /* Values grid */
+    .values-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--sp-lg);
+    }
+    .value-card {
+      background: var(--white);
+      border-radius: var(--r-lg);
+      padding: var(--sp-xl);
+      border: 1px solid #e8e6f0;
+      position: relative;
+      overflow: hidden;
+      transition: transform var(--ease), box-shadow var(--ease), border-color var(--ease);
+    }
+    .value-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent) 0%, var(--teal) 100%);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform var(--ease-out);
+    }
+    .value-card:hover { transform: translateY(-5px); box-shadow: var(--sh-md); border-color: rgba(0,211,183,.22); }
+    .value-card:hover::before { transform: scaleX(1); }
+
+    .value-card__number {
+      font-size: 3rem;
+      font-weight: 900;
+      letter-spacing: -.06em;
+      background: linear-gradient(135deg, rgba(0,211,183,.18) 0%, rgba(20,184,166,.12) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+      margin-bottom: var(--sp-sm);
+    }
+    .value-card__title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--text-dk);
+      margin-bottom: .625rem;
+    }
+    .value-card__text {
+      font-size: .9375rem;
+      color: var(--text-mt);
+      line-height: 1.75;
+    }
+
+    /* Icon wrap for value */
+    .value-card__icon {
+      width: 48px; height: 48px;
+      background: linear-gradient(135deg, rgba(0,211,183,.1), rgba(20,184,166,.06));
+      border: 1px solid rgba(0,211,183,.18);
+      border-radius: var(--r-md);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: var(--sp-md);
+      transition: background var(--ease);
+    }
+    .value-card:hover .value-card__icon {
+      background: linear-gradient(135deg, rgba(0,211,183,.18), rgba(20,184,166,.1));
+    }
+
+    /* Team / DNA pillars */
+    .dna-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--sp-md);
+      margin-top: var(--sp-xl);
+    }
+    .dna-item {
+      text-align: center;
+      padding: var(--sp-lg) var(--sp-md);
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+    }
+    .dna-item__icon {
+      width: 52px; height: 52px;
+      margin: 0 auto var(--sp-sm);
+      background: rgba(0,211,183,.1);
+      border-radius: var(--r-md);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .dna-item__title { font-size: 1rem; font-weight: 700; color: var(--text-1); margin-bottom: .4rem; }
+    .dna-item__text  { font-size: .875rem; color: var(--text-2); line-height: 1.6; }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .mission-layout { grid-template-columns: 1fr; }
+      .mission-left   { position: static; }
+      .values-grid    { grid-template-columns: 1fr; }
+      .dna-grid       { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 600px) {
+      .dna-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOPBAR CONTACT -->
+  <div class="topbar" role="complementary" aria-label="Informations de contact">
+    <div class="container topbar__inner">
+      <a href="tel:+33605861840" class="topbar__item" aria-label="Téléphone : 06 05 86 18 40">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.47 11.47 0 003.59.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.01l-2.2 2.21z" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="topbar__label">06 05 86 18 40</span>
+      </a>
+      <span class="topbar__sep" aria-hidden="true"></span>
+      <a href="mailto:anarouz.contact01@gmail.com" class="topbar__item" aria-label="Email : anarouz.contact01@gmail.com">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.75"/>
+          <path d="M2 7l10 7 10-7" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+        </svg>
+        <span class="topbar__label">anarouz.contact01@gmail.com</span>
+      </a>
+      <span class="topbar__sep" aria-hidden="true"></span>
+      <a href="https://www.linkedin.com/in/badreddine-hamya-268321a9" target="_blank" rel="noopener noreferrer" class="topbar__item" aria-label="LinkedIn de Badreddine Hamya">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="2" y="2" width="20" height="20" rx="4" stroke="currentColor" stroke-width="1.75"/>
+          <path d="M7 10v7M7 7v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M11 17v-4a2 2 0 014 0v4M11 10v7" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+        </svg>
+        <span class="topbar__label">LinkedIn</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- NAVIGATION -->
+  <header class="header" role="banner">
+    <nav class="nav container" aria-label="Navigation principale">
+      <a href="/index.html" class="nav__logo" aria-label="Anarouz — Retour à l'accueil">
+        <span class="nav__logo-text">Anarouz</span>
+      </a>
+      <button class="nav__toggle" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="nav-menu">
+        <span class="nav__toggle-bar"></span>
+        <span class="nav__toggle-bar"></span>
+        <span class="nav__toggle-bar"></span>
+      </button>
+      <ul class="nav__menu" id="nav-menu" role="list">
+        <li><a href="/index.html#services" class="nav__link">Services</a></li>
+        <li><a href="/index.html#projets" class="nav__link">Projets</a></li>
+        <li><a href="/about.html" class="nav__link nav__link--active" aria-current="page">À propos</a></li>
+        <li><a href="/services.html" class="nav__link">Offres détaillées</a></li>
+        <li><a href="/contact.html" class="btn btn--primary btn--sm">Discuter de votre projet</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main-content">
+
+    <!-- ===================== PAGE HERO ===================== -->
+    <section class="hero" aria-labelledby="about-hero-title" style="min-height: 52vh;">
+      <div class="hero__bg" aria-hidden="true"></div>
+      <div class="container hero__content" style="padding: calc(var(--nav-h) + var(--sp-2xl)) 0 var(--sp-2xl);">
+        <nav aria-label="Fil d'Ariane">
+          <ol class="breadcrumb" role="list">
+            <li><a href="/index.html" class="breadcrumb__link">Accueil</a></li>
+            <li aria-hidden="true">/</li>
+            <li aria-current="page">À propos</li>
+          </ol>
+        </nav>
+        <div class="hero__badge" style="margin-top: var(--sp-md);">
+          <span>Fondée en 2025 · Paris, France</span>
+        </div>
+        <h1 class="hero__title" id="about-hero-title" style="max-width: 820px;">
+          À propos<br>
+          <span class="hero__title--accent">d'Anarouz</span>
+        </h1>
+        <p class="hero__subtitle" style="max-width: 640px; margin-bottom: 0;">
+          Nous transformons la complexité technologique en solutions simples et puissantes — combinant expertise technique et vision stratégique pour un impact concret et mesurable.
+        </p>
+      </div>
+    </section>
+
+    <!-- ===================== MISSION ===================== -->
+    <section class="section section--dark" id="mission" aria-labelledby="mission-title">
+      <div class="container">
+        <div class="mission-layout">
+
+          <div class="mission-left">
+            <p class="section__tag section__tag--light">Notre mission</p>
+            <h2 class="section__title section__title--light" id="mission-title">
+              Transformer la complexité<br>
+              <span style="background: linear-gradient(135deg, var(--indigo-light) 0%, var(--teal-light) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">en solutions puissantes</span>
+            </h2>
+
+            <div class="mission-stats">
+              <div class="history-block animate-in">
+              <p class="history-block__year">Fondée en 2025</p>
+              <p class="history-block__text">
+                Anarouz s'appuie sur une expertise de haut niveau en ingénierie logicielle, développement web et systèmes d'information géographique. Notre approche repose sur une solide expérience acquise dans des environnements exigeants, garantissant des solutions fiables, performantes et adaptées aux enjeux techniques les plus complexes.
+              </p>
+            </div>
+            </div>
+          </div>
+
+          <div class="mission-right">
+            <p class="mission-intro animate-in">
+              Transformer la complexité technologique en solutions simples et puissantes qui <strong>propulsent nos clients vers l'avant</strong>. Nous combinons expertise technique et vision stratégique pour créer des systèmes qui résolvent des problèmes réels.
+            </p>
+
+            <div class="dna-grid">
+              <div class="dna-item animate-in">
+                <div class="dna-item__icon" aria-hidden="true">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2L2 7v5c0 5.5 4.2 10.7 10 11.9C17.8 22.7 22 17.5 22 12V7l-10-5z" stroke="#00d3b7" stroke-width="1.75" stroke-linejoin="round"/>
+                    <path d="M8 12l3 3 5-5" stroke="#00d3b7" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <p class="dna-item__title">Fiabilité</p>
+                <p class="dna-item__text">Des solutions robustes conçues pour les environnements critiques</p>
+              </div>
+              <div class="dna-item animate-in">
+                <div class="dna-item__icon" aria-hidden="true">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="3" stroke="#00d3b7" stroke-width="1.75"/>
+                    <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12" stroke="#00d3b7" stroke-width="1.75" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <p class="dna-item__title">Performance</p>
+                <p class="dna-item__text">Optimisation à chaque niveau de la stack technique</p>
+              </div>
+              <div class="dna-item animate-in">
+                <div class="dna-item__icon" aria-hidden="true">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="#00d3b7" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="9" cy="7" r="4" stroke="#00d3b7" stroke-width="1.75"/>
+                    <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="#00d3b7" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <p class="dna-item__title">Partenariat</p>
+                <p class="dna-item__text">Collaboration étroite avec vos équipes à chaque étape</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== VALEURS ===================== -->
+    <section class="section section--light" id="valeurs" aria-labelledby="valeurs-title">
+      <div class="container">
+        <div class="section__header">
+          <p class="section__tag">Ce qui nous guide</p>
+          <h2 class="section__title" id="valeurs-title">
+            Nos valeurs fondamentales
+          </h2>
+          <p class="section__subtitle">
+            Quatre principes qui orientent chaque décision, chaque ligne de code et chaque relation client — de la conception à la livraison et au-delà.
+          </p>
+        </div>
+
+        <div class="values-grid">
+
+          <article class="value-card animate-in" aria-labelledby="value-1">
+            <div class="value-card__icon" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                <path d="M13 2l2.6 5.3 5.8.85-4.2 4.1.99 5.75L13 15.3l-5.19 2.7.99-5.75L4.6 8.15l5.8-.85L13 2z" stroke="#00d3b7" stroke-width="1.75" stroke-linejoin="round"/>
+                <path d="M13 20v4M9 22h8" stroke="#00d3b7" stroke-width="1.75" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <p class="value-card__number">1</p>
+            <h3 class="value-card__title" id="value-1">Innovation Pragmatique</h3>
+            <p class="value-card__text">Adopter les technologies émergentes avec une approche centrée sur la valeur métier et le retour sur investissement.</p>
+          </article>
+
+          <article class="value-card animate-in" aria-labelledby="value-2">
+            <div class="value-card__icon" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                <rect x="3" y="3" width="20" height="20" rx="3" stroke="#00d3b7" stroke-width="1.75"/>
+                <path d="M8 13l4 4 6-7" stroke="#00d3b7" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <p class="value-card__number">2</p>
+            <h3 class="value-card__title" id="value-2">Excellence Technique</h3>
+            <p class="value-card__text">Qualité et robustesse dans chaque ligne de code, chaque architecture et chaque solution déployée.</p>
+          </article>
+
+          <article class="value-card animate-in" aria-labelledby="value-3">
+            <div class="value-card__icon" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                <circle cx="9" cy="9" r="5" stroke="#00d3b7" stroke-width="1.75"/>
+                <circle cx="17" cy="17" r="5" stroke="#00d3b7" stroke-width="1.75"/>
+                <path d="M13 9c1.5 1.5 1.5 3.5 0 5" stroke="#00d3b7" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <p class="value-card__number">3</p>
+            <h3 class="value-card__title" id="value-3">Collaboration Transparente</h3>
+            <p class="value-card__text">Partenariat ouvert avec nos clients à chaque étape, de la conception à la livraison et au-delà.</p>
+          </article>
+
+          <article class="value-card animate-in" aria-labelledby="value-4">
+            <div class="value-card__icon" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                <path d="M5 20l5-6 4 4 4-5 5 7H5z" stroke="#00d3b7" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M20 5l-3 3M20 5l-3-1M20 5l1 3" stroke="#00d3b7" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <p class="value-card__number">4</p>
+            <h3 class="value-card__title" id="value-4">Impact Mesurable</h3>
+            <p class="value-card__text">Solutions conçues pour générer des résultats tangibles, mesurables et durables pour votre entreprise.</p>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== EXPERTISE ===================== -->
+    <section class="section section--dark" id="expertise" aria-labelledby="expertise-title">
+      <div class="container">
+        <div class="section__header section__header--light">
+          <p class="section__tag section__tag--light">Notre ADN technique</p>
+          <h2 class="section__title section__title--light" id="expertise-title">
+            Une double compétence rare
+          </h2>
+          <p class="section__subtitle section__subtitle--light">
+            À l'intersection du développement web, de l'intelligence géospatiale et de la data science — une combinaison qui fait la différence sur les projets complexes.
+          </p>
+        </div>
+
+        <div class="services-grid" style="margin-top: 0;">
+
+          <article class="service-card animate-in" aria-labelledby="exp-web">
+            <div class="service-card__icon" aria-hidden="true">
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                <rect x="2" y="8" width="36" height="26" rx="3" stroke="#00d3b7" stroke-width="1.75"/>
+                <path d="M2 14h36" stroke="#00d3b7" stroke-width="1.75"/>
+                <circle cx="7" cy="11" r="1.5" fill="#00d3b7"/>
+                <circle cx="12" cy="11" r="1.5" fill="#00d3b7"/>
+                <circle cx="17" cy="11" r="1.5" fill="#00d3b7"/>
+                <path d="M10 23l5 4-5 4M21 31h9" stroke="#00d3b7" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h3 class="service-card__title" id="exp-web">Ingénierie logicielle</h3>
+            <p class="service-card__text">Architecture applicative, développement full-stack, performance et scalabilité. Des bases solides pour des systèmes qui durent.</p>
+            <ul class="service-card__features" aria-label="Compétences">
+              <li>Architecture microservices</li>
+              <li>APIs REST &amp; intégrations</li>
+              <li>Performance &amp; optimisation</li>
+            </ul>
+          </article>
+
+          <article class="service-card service-card--featured animate-in" aria-labelledby="exp-sig">
+            <div class="service-card__badge">Expertise distinctive</div>
+            <div class="service-card__icon" aria-hidden="true">
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                <circle cx="20" cy="20" r="16" stroke="white" stroke-width="1.75"/>
+                <path d="M4 20h32M20 4v32" stroke="white" stroke-width="1.5" stroke-dasharray="3 3"/>
+                <path d="M7 12c4 2 8 3 13 2s9-4 13-2" stroke="white" stroke-width="1.5"/>
+                <path d="M6 28c4-2 9-3 14-2s10 3 14 2" stroke="white" stroke-width="1.5"/>
+                <circle cx="20" cy="20" r="3" fill="white"/>
+              </svg>
+            </div>
+            <h3 class="service-card__title" id="exp-sig">Intelligence géospatiale</h3>
+            <p class="service-card__text">SIG, cartographie interactive et analyse spatiale avancée. Une expertise rare qui ouvre des possibilités d'analyse territoriale uniques.</p>
+            <ul class="service-card__features" aria-label="Compétences">
+              <li>Plateformes SIG sur mesure</li>
+              <li>Analyse spatiale &amp; modélisation</li>
+              <li>Standards OGC (WMS, WFS, GeoJSON)</li>
+            </ul>
+            <a href="/services.html#sig" class="service-card__link service-card__link--light" aria-label="En savoir plus sur nos solutions SIG">
+              Découvrir nos solutions SIG
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M3 8h10M8 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </a>
+          </article>
+
+          <article class="service-card animate-in" aria-labelledby="exp-data">
+            <div class="service-card__icon" aria-hidden="true">
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                <rect x="4" y="27" width="6" height="9" rx="1" fill="#00d3b7"/>
+                <rect x="14" y="19" width="6" height="17" rx="1" fill="#00d3b7" opacity="0.8"/>
+                <rect x="24" y="11" width="6" height="25" rx="1" fill="#00d3b7" opacity="0.6"/>
+                <rect x="34" y="5" width="3" height="31" rx="1" fill="#00d3b7" opacity="0.4"/>
+                <path d="M3 36h35" stroke="#001841" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3 class="service-card__title" id="exp-data">Data &amp; IA appliquée</h3>
+            <p class="service-card__text">Dashboards, pipelines de données et modèles IA opérationnels. De la donnée brute à l'insight stratégique, sans étape intermédiaire inutile.</p>
+            <ul class="service-card__features" aria-label="Compétences">
+              <li>Data visualisation avancée</li>
+              <li>Automatisation &amp; pipelines</li>
+              <li>Modèles IA opérationnels</li>
+            </ul>
+          </article>
+
+          <article class="service-card animate-in" aria-labelledby="exp-consulting">
+            <div class="service-card__icon" aria-hidden="true">
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                <rect x="3" y="3" width="14" height="14" rx="3" stroke="#00d3b7" stroke-width="1.75"/>
+                <rect x="23" y="3" width="14" height="14" rx="3" stroke="#00d3b7" stroke-width="1.75"/>
+                <rect x="3" y="23" width="14" height="14" rx="3" stroke="#00d3b7" stroke-width="1.75"/>
+                <rect x="23" y="23" width="14" height="14" rx="3" stroke="#00d3b7" stroke-width="1.75"/>
+                <path d="M17 10h6M10 17v6M30 17v6M17 30h6" stroke="#00d3b7" stroke-width="1.75" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3 class="service-card__title" id="exp-consulting">Conseil &amp; stratégie digitale</h3>
+            <p class="service-card__text">Audit technique, roadmap et intégration de systèmes. Un regard extérieur expert pour aligner vos choix techniques avec vos enjeux métiers.</p>
+            <ul class="service-card__features" aria-label="Compétences">
+              <li>Audit technique &amp; stratégique</li>
+              <li>Intégration de systèmes</li>
+              <li>Transfert de compétences</li>
+            </ul>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== CTA ===================== -->
+    <section class="section cta-section" aria-labelledby="cta-about-title">
+      <div class="container">
+        <div class="cta-box">
+          <div class="cta-box__content">
+            <h2 class="cta-box__title" id="cta-about-title">
+              Travaillons ensemble
+            </h2>
+            <p class="cta-box__text">
+              Un premier échange gratuit pour comprendre vos enjeux et vous proposer une approche adaptée à vos objectifs.
+            </p>
+            <div class="cta-box__actions">
+              <a href="/contact.html" class="btn btn--primary btn--lg">
+                Démarrer un projet
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path d="M4 10h12M10 4l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </a>
+              <a href="/services.html" class="btn btn--ghost btn--lg">Voir nos services</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer" role="contentinfo">
+    <div class="container footer__inner">
+      <div class="footer__brand">
+        <a href="/index.html" class="footer__logo" aria-label="Anarouz — Retour à l'accueil">Anarouz</a>
+        <p class="footer__tagline">Solutions web, SIG &amp; data sur mesure</p>
+      </div>
+      <nav class="footer__nav" aria-label="Navigation pied de page">
+        <div class="footer__nav-group">
+          <h4 class="footer__nav-title">Services</h4>
+          <ul class="footer__nav-list" role="list">
+            <li><a href="/services.html#web" class="footer__nav-link">Développement Web</a></li>
+            <li><a href="/services.html#sig" class="footer__nav-link">Solutions SIG</a></li>
+            <li><a href="/services.html#data" class="footer__nav-link">Data &amp; IA</a></li>
+            <li><a href="/services.html#consulting" class="footer__nav-link">Consulting</a></li>
+          </ul>
+        </div>
+        <div class="footer__nav-group">
+          <h4 class="footer__nav-title">Entreprise</h4>
+          <ul class="footer__nav-list" role="list">
+            <li><a href="/about.html" class="footer__nav-link">À propos</a></li>
+            <li><a href="/index.html#projets" class="footer__nav-link">Nos projets</a></li>
+            <li><a href="/contact.html" class="footer__nav-link">Contact</a></li>
+            <li><a href="/contact.html#audit" class="footer__nav-link">Audit gratuit</a></li>
+          </ul>
+        </div>
+        <div class="footer__nav-group">
+          <h4 class="footer__nav-title">Contact</h4>
+          <ul class="footer__contact-list" role="list">
+            <li>
+              <a href="tel:+33605861840" class="footer__contact-item" aria-label="Appeler le 06 05 86 18 40">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.47 11.47 0 003.59.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.01l-2.2 2.21z" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                06 05 86 18 40
+              </a>
+            </li>
+            <li>
+              <a href="mailto:anarouz.contact01@gmail.com" class="footer__contact-item" aria-label="Envoyer un email">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.75"/><path d="M2 7l10 7 10-7" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>
+                anarouz.contact01@gmail.com
+              </a>
+            </li>
+            <li>
+              <a href="https://www.linkedin.com/in/badreddine-hamya-268321a9" target="_blank" rel="noopener noreferrer" class="footer__contact-item" aria-label="Profil LinkedIn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="4" stroke="currentColor" stroke-width="1.75"/><path d="M7 10v7M7 7v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M11 17v-4a2 2 0 014 0v4M11 10v7" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>
+                LinkedIn
+              </a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+    </div>
+    <div class="footer__bottom">
+      <div class="container">
+        <p class="footer__copy">
+          &copy; 2026 Anarouz. Tous droits réservés. —
+          <a href="/services.html" class="footer__copy-link">Développement web sur mesure</a>,
+          <a href="/services.html#sig" class="footer__copy-link">solutions SIG</a> &amp;
+          <a href="/services.html#data" class="footer__copy-link">intelligence géospatiale</a>
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/script.js"></script>
+</body>
+</html>

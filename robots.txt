@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# Bloquer les ressources inutiles pour les crawlers
+Disallow: /assets/images/
+Allow: /assets/images/*.webp
+Allow: /assets/images/*.png
+Allow: /assets/images/*.jpg
+
+Sitemap: https://anarouz01.github.io/sitemap.xml

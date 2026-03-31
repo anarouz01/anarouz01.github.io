@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact — Discutons de votre projet | Anarouz</title>
+  <meta name="description" content="Contactez Anarouz pour discuter de votre projet web, SIG ou data. Premier échange gratuit, réponse sous 24h. Nous accompagnons entreprises, collectivités et startups." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://anarouz01.github.io/contact.html" />
+
+  <meta property="og:title" content="Contact — Discutons de votre projet | Anarouz" />
+  <meta property="og:description" content="Premier échange gratuit pour identifier vos besoins. Réponse sous 24h." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://anarouz01.github.io/contact.html" />
+  <meta property="og:locale" content="fr_FR" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+
+  <!-- EmailJS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script>emailjs.init("zigKxy8QS-X7UX5oj");</script>
+
+  <style>
+    /* ── Styles spécifiques à la page contact ─────────────────────────── */
+
+    /* Page hero compact */
+    .page-hero--contact {
+      min-height: auto;
+      padding: calc(var(--nav-h) + 4rem) 0 4rem;
+    }
+
+    /* Contact layout */
+    .contact-layout {
+      display: grid;
+      grid-template-columns: 1fr 1.4fr;
+      gap: var(--sp-2xl);
+      align-items: start;
+    }
+
+    /* Info side */
+    .contact-info { position: sticky; top: calc(var(--nav-h) + 2rem); }
+
+    .contact-info__title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: var(--sp-sm);
+    }
+    .contact-info__text {
+      font-size: 1rem;
+      color: rgba(255,255,255,.65);
+      line-height: 1.75;
+      margin-bottom: var(--sp-xl);
+    }
+
+    .contact-promises {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-md);
+      margin-bottom: var(--sp-xl);
+    }
+    .contact-promise {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--sp-md);
+      padding: var(--sp-md);
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: var(--r-md);
+    }
+    .contact-promise__icon {
+      width: 40px; height: 40px;
+      background: rgba(0,211,183,.12);
+      border-radius: var(--r-sm);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .contact-promise__title { font-size: .9375rem; font-weight: 600; color: var(--white); margin-bottom: .2rem; }
+    .contact-promise__text  { font-size: .8125rem; color: rgba(255,255,255,.55); line-height: 1.5; }
+
+    .contact-clients-label {
+      font-size: .75rem;
+      font-weight: 600;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.35);
+      margin-bottom: .75rem;
+    }
+    /* Grille de logos clients sur fond sombre */
+    .contact-clients-list {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: .625rem;
+    }
+    .contact-client-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: .5rem .875rem;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 8px;
+      position: relative;
+      margin: 0; /* reset figure */
+      transition: background .22s ease, border-color .22s ease;
+    }
+    .contact-client-logo:hover {
+      background: rgba(255,255,255,.12);
+      border-color: rgba(255,255,255,.18);
+    }
+    /* Tooltip bulle */
+    .contact-client-logo::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: calc(100% + 10px);
+      left: 50%;
+      transform: translateX(-50%) translateY(6px);
+      background: rgba(255,255,255,.95);
+      color: #0f172a;
+      font-size: .72rem;
+      font-weight: 600;
+      white-space: nowrap;
+      padding: .35rem .75rem;
+      border-radius: 5px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .22s ease, transform .22s ease;
+      z-index: 20;
+    }
+    .contact-client-logo::before {
+      content: '';
+      position: absolute;
+      bottom: calc(100% + 4px);
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: rgba(255,255,255,.95);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .22s ease;
+      z-index: 20;
+    }
+    .contact-client-logo:hover::after {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .contact-client-logo:hover::before { opacity: 1; }
+    /* Images en couleur d'origine */
+    .contact-client-logo img {
+      display: block;
+      height: 40px;
+      max-width: 110px;
+      width: auto;
+      object-fit: contain;
+      transition: transform .22s ease, opacity .22s ease;
+    }
+    .contact-client-logo:hover img {
+      transform: scale(1.06);
+      opacity: .85;
+    }
+
+    /* Form card */
+    .contact-form-card {
+      background: var(--white);
+      border-radius: var(--r-lg);
+      padding: var(--sp-2xl);
+      box-shadow: var(--sh-lg);
+    }
+
+    .contact-form-card__title {
+      font-size: 1.375rem;
+      color: var(--text-dk);
+      margin-bottom: .375rem;
+    }
+    .contact-form-card__sub {
+      font-size: .9375rem;
+      color: var(--text-mt);
+      margin-bottom: var(--sp-xl);
+    }
+
+    /* Form */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--sp-md);
+    }
+    .form-group       { display: flex; flex-direction: column; gap: .4rem; }
+    .form-group--full { grid-column: 1 / -1; }
+
+    .form-label {
+      font-size: .875rem;
+      font-weight: 600;
+      color: var(--text-dk);
+    }
+    .form-label span { color: var(--accent); margin-left: .15rem; }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+      width: 100%;
+      padding: .75rem 1rem;
+      font-family: var(--font);
+      font-size: .9375rem;
+      color: var(--text-dk);
+      background: var(--white);
+      border: 1.5px solid #d1d5db;
+      border-radius: var(--r-sm);
+      transition: border-color var(--ease), box-shadow var(--ease);
+      outline: none;
+      appearance: none;
+    }
+    .form-input::placeholder,
+    .form-textarea::placeholder { color: #a0aec0; }
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,211,183,.12);
+    }
+    .form-select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 1rem center;
+      padding-right: 2.5rem;
+      cursor: pointer;
+    }
+    .form-textarea { resize: vertical; min-height: 130px; line-height: 1.6; }
+
+    .form-checkbox-group {
+      display: flex;
+      align-items: flex-start;
+      gap: .75rem;
+      margin-top: var(--sp-sm);
+    }
+    .form-checkbox {
+      width: 18px; height: 18px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 4px;
+      cursor: pointer;
+      flex-shrink: 0;
+      margin-top: 2px;
+      accent-color: var(--accent); /* bleu électrique */
+    }
+    .form-checkbox-label {
+      font-size: .875rem;
+      color: var(--text-mt);
+      line-height: 1.5;
+    }
+
+    .form-submit {
+      margin-top: var(--sp-lg);
+      width: 100%;
+      justify-content: center;
+      padding: 1rem;
+      font-size: 1rem;
+      border-radius: var(--r-sm);
+    }
+
+    .form-note {
+      text-align: center;
+      font-size: .8125rem;
+      color: var(--text-mt);
+      margin-top: .75rem;
+    }
+
+    /* Audit section */
+    .audit-banner {
+      background: linear-gradient(135deg, var(--accent-dark) 0%, var(--accent) 100%);
+      border-radius: var(--r-md);
+      padding: var(--sp-xl);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-lg);
+      flex-wrap: wrap;
+      margin-top: var(--sp-2xl);
+    }
+    .audit-banner__text h3 { font-size: 1.25rem; color: var(--white); margin-bottom: .375rem; }
+    .audit-banner__text p  { font-size: .9375rem; color: rgba(255,255,255,.68); }
+
+    /* Success message (hidden by default) */
+    .form-success {
+      display: none;
+      text-align: center;
+      padding: var(--sp-2xl) var(--sp-xl);
+    }
+    .form-success__icon {
+      width: 64px; height: 64px;
+      background: rgba(0,211,183,.1);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto var(--sp-lg);
+    }
+    .form-success__title { font-size: 1.5rem; color: var(--text-dk); margin-bottom: .5rem; }
+    .form-success__text  { font-size: 1rem; color: var(--text-mt); }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .contact-layout { grid-template-columns: 1fr; }
+      .contact-info   { position: static; }
+    }
+    @media (max-width: 600px) {
+      .form-grid            { grid-template-columns: 1fr; }
+      .contact-form-card    { padding: var(--sp-lg); }
+      .audit-banner         { flex-direction: column; text-align: center; }
+    }
+    /* Validation error override */
+    .form-note { color: var(--text-mt); }
+
+    /* Champ en erreur */
+    .form-input--error,
+    .form-select--error,
+    .form-textarea--error {
+      border-color: #ef4444 !important;
+      box-shadow: 0 0 0 3px rgba(239,68,68,.1);
+    }
+    .form-error-msg {
+      font-size: .8125rem;
+      color: #ef4444;
+      margin-top: .2rem;
+      display: none;
+    }
+    .form-error-msg.visible { display: block; }
+
+    /* Bouton loading */
+    .btn--loading {
+      opacity: .7;
+      pointer-events: none;
+      cursor: not-allowed;
+    }
+    .btn--loading .btn-text { display: none; }
+    .btn-spinner {
+      display: none;
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    .btn--loading .btn-spinner { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Bandeau d'erreur global */
+    .form-global-error {
+      display: none;
+      background: rgba(239,68,68,.08);
+      border: 1px solid rgba(239,68,68,.25);
+      border-radius: var(--r-sm);
+      padding: .875rem 1rem;
+      font-size: .9rem;
+      color: #ef4444;
+      margin-bottom: var(--sp-md);
+      text-align: center;
+    }
+    .form-global-error.visible { display: block; }
+  </style>
+</head>
+<body>
+
+  <!-- TOPBAR CONTACT -->
+  <div class="topbar" role="complementary" aria-label="Informations de contact">
+    <div class="container topbar__inner">
+      <a href="tel:+33605861840" class="topbar__item" aria-label="Téléphone : 06 05 86 18 40">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.47 11.47 0 003.59.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.01l-2.2 2.21z" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="topbar__label">06 05 86 18 40</span>
+      </a>
+      <span class="topbar__sep" aria-hidden="true"></span>
+      <a href="mailto:anarouz.contact01@gmail.com" class="topbar__item" aria-label="Email : anarouz.contact01@gmail.com">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.75"/>
+          <path d="M2 7l10 7 10-7" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+        </svg>
+        <span class="topbar__label">anarouz.contact01@gmail.com</span>
+      </a>
+      <span class="topbar__sep" aria-hidden="true"></span>
+      <a href="https://www.linkedin.com/in/badreddine-hamya-268321a9" target="_blank" rel="noopener noreferrer" class="topbar__item" aria-label="LinkedIn de Badreddine Hamya">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="2" y="2" width="20" height="20" rx="4" stroke="currentColor" stroke-width="1.75"/>
+          <path d="M7 10v7M7 7v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M11 17v-4a2 2 0 014 0v4M11 10v7" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+        </svg>
+        <span class="topbar__label">LinkedIn</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- NAVIGATION -->
+  <header class="header" role="banner">
+    <nav class="nav container" aria-label="Navigation principale">
+      <a href="/index.html" class="nav__logo" aria-label="Anarouz — Retour à l'accueil">
+        <span class="nav__logo-text">Anarouz</span>
+      </a>
+      <button class="nav__toggle" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="nav-menu">
+        <span class="nav__toggle-bar"></span>
+        <span class="nav__toggle-bar"></span>
+        <span class="nav__toggle-bar"></span>
+      </button>
+      <ul class="nav__menu" id="nav-menu" role="list">
+        <li><a href="/index.html#services" class="nav__link">Services</a></li>
+        <li><a href="/index.html#projets" class="nav__link">Projets</a></li>
+        <li><a href="/about.html" class="nav__link">À propos</a></li>
+        <li><a href="/services.html" class="nav__link">Offres détaillées</a></li>
+        <li><a href="/contact.html" class="btn btn--primary btn--sm" aria-current="page">Discuter de votre projet</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main-content">
+
+    <!-- ===================== PAGE HERO ===================== -->
+    <section class="hero page-hero--contact" aria-labelledby="contact-page-title">
+      <div class="hero__bg" aria-hidden="true"></div>
+      <div class="container" style="position:relative;z-index:1;">
+        <nav aria-label="Fil d'Ariane">
+          <ol class="breadcrumb" role="list">
+            <li><a href="/index.html" class="breadcrumb__link">Accueil</a></li>
+            <li aria-hidden="true">/</li>
+            <li aria-current="page">Contact</li>
+          </ol>
+        </nav>
+        <h1 class="hero__title" id="contact-page-title" style="font-size: clamp(2rem, 4vw, 3rem); margin-top: 1.5rem;">
+          Discutons de<br>
+          <span class="hero__title--accent">votre projet</span>
+        </h1>
+        <p class="hero__subtitle" style="margin-bottom: 0;">
+          Un premier échange pour comprendre vos enjeux et vous proposer la solution la plus adaptée. Gratuit, sans engagement.
+        </p>
+      </div>
+    </section>
+
+    <!-- ===================== CONTACT SECTION ===================== -->
+    <section class="section section--dark" style="padding-top: var(--sp-2xl);" aria-labelledby="form-title">
+      <div class="container">
+        <div class="contact-layout">
+
+          <!-- Info -->
+          <div class="contact-info">
+            <h2 class="contact-info__title" id="form-title">Parlons de vos besoins</h2>
+            <p class="contact-info__text">
+              Que vous ayez un projet précis ou simplement des questions sur nos services, nous sommes là pour vous orienter. Réponse garantie sous 24h.
+            </p>
+
+            <div class="contact-promises" aria-label="Nos engagements">
+              <div class="contact-promise">
+                <div class="contact-promise__icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <circle cx="10" cy="10" r="8" stroke="#00d3b7" stroke-width="1.75"/>
+                    <path d="M10 6v4l2.5 2" stroke="#00d3b7" stroke-width="1.75" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <div>
+                  <p class="contact-promise__title">Réponse sous 24h</p>
+                  <p class="contact-promise__text">Nous analysons votre demande et revenons vers vous rapidement avec une proposition adaptée.</p>
+                </div>
+              </div>
+              <div class="contact-promise">
+                <div class="contact-promise__icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M7 10l2.5 2.5 4-4M18 10a8 8 0 11-16 0 8 8 0 0116 0z" stroke="#00d3b7" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div>
+                  <p class="contact-promise__title">Échange gratuit, sans engagement</p>
+                  <p class="contact-promise__text">Le premier appel est un moment d'écoute — pas de pression commerciale, juste de l'expertise.</p>
+                </div>
+              </div>
+              <div class="contact-promise">
+                <div class="contact-promise__icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M10 2L2 6v5c0 4.4 3.4 8.5 8 9.5 4.6-1 8-5.1 8-9.5V6l-8-4z" stroke="#00d3b7" stroke-width="1.75" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div>
+                  <p class="contact-promise__title">Confidentialité garantie</p>
+                  <p class="contact-promise__text">Vos informations et votre projet restent strictement confidentiels.</p>
+                </div>
+              </div>
+            </div>
+
+            <p class="contact-clients-label">Ils nous ont fait confiance</p>
+            <div class="contact-clients-list" aria-label="Références clients">
+              <figure class="contact-client-logo" data-tooltip="Geoptis — SaaS de Géomarketing">
+                <img src="/assets/images/geoptis.webp"
+                     alt="Logo Geoptis, client Anarouz — plateforme SaaS de géomarketing"
+                     title="Geoptis — SaaS de Géomarketing"
+                     loading="lazy" height="40" />
+              </figure>
+              <figure class="contact-client-logo" data-tooltip="PTV France — Cartographie & mobilité">
+                <img src="/assets/images/ptvgroup.webp"
+                     alt="Logo PTV France, client Anarouz — optimisation cartographique et mobilité"
+                     title="PTV France — Cartographie & mobilité"
+                     loading="lazy" height="40" />
+              </figure>
+              <figure class="contact-client-logo" data-tooltip="ESRI France — Solutions SIG">
+                <img src="/assets/images/esri.webp"
+                     alt="Logo ESRI France, client Anarouz — leader des systèmes d'information géographique"
+                     title="ESRI France — Solutions SIG"
+                     loading="lazy" height="40" />
+              </figure>
+              <figure class="contact-client-logo" data-tooltip="Magellium — SIG secteur public">
+                <img src="/assets/images/magellium.webp"
+                     alt="Logo Magellium, client Anarouz — applications SIG critiques secteur public"
+                     title="Magellium — SIG secteur public"
+                     loading="lazy" height="40" />
+              </figure>
+              <figure class="contact-client-logo" data-tooltip="SFR — Télécommunications">
+                <img src="/assets/images/sfr.webp"
+                     alt="Logo SFR, client Anarouz — opérateur télécommunications"
+                     title="SFR — Télécommunications"
+                     loading="lazy" height="40" />
+              </figure>
+              <figure class="contact-client-logo" data-tooltip="Institut Paris Région — Aménagement territorial">
+                <img src="/assets/images/ipr.webp"
+                     alt="Logo Institut Paris Région, client Anarouz — aménagement territorial en Île-de-France"
+                     title="Institut Paris Région — Aménagement territorial"
+                     loading="lazy" height="40" />
+              </figure>
+            </div>
+          </div>
+
+          <!-- Form card -->
+          <div class="contact-form-card" id="audit">
+            <h3 class="contact-form-card__title">Envoyez-nous votre message</h3>
+            <p class="contact-form-card__sub">Complétez le formulaire — nous revenons vers vous sous 24h.</p>
+
+            <!-- Success message -->
+            <div class="form-success" id="form-success" role="alert" aria-live="polite">
+              <div class="form-success__icon" aria-hidden="true">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                  <path d="M6 16l8 8 12-12" stroke="#00d3b7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <h4 class="form-success__title">Message envoyé !</h4>
+              <p class="form-success__text">Merci pour votre message. Nous reviendrons vers vous sous 24h pour discuter de votre projet.</p>
+            </div>
+
+            <!-- Form -->
+            <form
+              class="contact-form"
+              id="contact-form"
+              novalidate
+              aria-label="Formulaire de contact"
+            >
+              <div class="form-grid">
+
+                <div class="form-group">
+                  <label class="form-label" for="prenom">
+                    Prénom <span aria-label="obligatoire">*</span>
+                  </label>
+                  <input
+                    class="form-input"
+                    type="text"
+                    id="prenom"
+                    name="prenom"
+                    placeholder="Votre prénom"
+                    required
+                    autocomplete="given-name"
+                    aria-required="true"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="nom">
+                    Nom <span aria-label="obligatoire">*</span>
+                  </label>
+                  <input
+                    class="form-input"
+                    type="text"
+                    id="nom"
+                    name="nom"
+                    placeholder="Votre nom"
+                    required
+                    autocomplete="family-name"
+                    aria-required="true"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="email">
+                    Email professionnel <span aria-label="obligatoire">*</span>
+                  </label>
+                  <input
+                    class="form-input"
+                    type="email"
+                    id="email"
+                    name="email"
+                    placeholder="vous@entreprise.com"
+                    required
+                    autocomplete="email"
+                    aria-required="true"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="societe">Entreprise / Organisation</label>
+                  <input
+                    class="form-input"
+                    type="text"
+                    id="societe"
+                    name="societe"
+                    placeholder="Nom de votre structure"
+                    autocomplete="organization"
+                  />
+                </div>
+
+                <div class="form-group form-group--full">
+                  <label class="form-label" for="service">
+                    Service qui vous intéresse <span aria-label="obligatoire">*</span>
+                  </label>
+                  <select
+                    class="form-select"
+                    id="service"
+                    name="service"
+                    required
+                    aria-required="true"
+                  >
+                    <option value="" disabled selected>Choisir un service…</option>
+                    <option value="web">Développement Web sur mesure</option>
+                    <option value="sig">Solutions SIG &amp; Cartographie</option>
+                    <option value="data">Data &amp; Intelligence Artificielle</option>
+                    <option value="consulting">Intégration &amp; Consulting</option>
+                    <option value="audit">Audit gratuit</option>
+                    <option value="autre">Autre / Je ne sais pas encore</option>
+                  </select>
+                </div>
+
+                <div class="form-group form-group--full">
+                  <label class="form-label" for="message">
+                    Décrivez votre projet <span aria-label="obligatoire">*</span>
+                  </label>
+                  <textarea
+                    class="form-textarea"
+                    id="message"
+                    name="message"
+                    placeholder="Contexte, objectifs, contraintes, délais… plus c'est précis, mieux c'est."
+                    required
+                    aria-required="true"
+                  ></textarea>
+                </div>
+
+                <div class="form-group form-group--full">
+                  <div class="form-checkbox-group">
+                    <input
+                      class="form-checkbox"
+                      type="checkbox"
+                      id="rgpd"
+                      name="rgpd"
+                      required
+                      aria-required="true"
+                    />
+                    <label class="form-checkbox-label" for="rgpd">
+                      J'accepte que mes données soient utilisées pour traiter ma demande. Elles ne seront jamais transmises à des tiers. <span aria-label="obligatoire" style="color:var(--accent);">*</span>
+                    </label>
+                  </div>
+                </div>
+
+              </div>
+
+              <div class="form-global-error" id="form-global-error" role="alert" aria-live="assertive">
+                Une erreur est survenue lors de l'envoi. Veuillez réessayer ou nous contacter directement.
+              </div>
+
+              <button type="submit" class="btn btn--primary form-submit" id="form-submit-btn">
+                <span class="btn-text">
+                  Envoyer ma demande
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                    <path d="M4 10h12M10 4l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+                <svg class="btn-spinner" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+                  <circle cx="9" cy="9" r="7" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="38" stroke-dashoffset="10"/>
+                </svg>
+              </button>
+              <p class="form-note">Réponse garantie sous 24h &middot; Sans engagement</p>
+            </form>
+
+            <!-- Audit banner -->
+            <div class="audit-banner" id="audit-info" aria-label="Offre audit gratuit">
+              <div class="audit-banner__text">
+                <h3>Obtenez un audit gratuit</h3>
+                <p>Nous analysons votre situation actuelle et vous proposons des recommandations concrètes — sans frais.</p>
+              </div>
+              <a href="#contact-form" class="btn btn--outline btn--lg">
+                Demander l'audit
+              </a>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer" role="contentinfo">
+    <div class="container footer__inner">
+      <div class="footer__brand">
+        <a href="/index.html" class="footer__logo" aria-label="Anarouz — Retour à l'accueil">Anarouz</a>
+        <p class="footer__tagline">Solutions web, SIG &amp; data sur mesure</p>
+      </div>
+      <nav class="footer__nav" aria-label="Navigation pied de page">
+        <div class="footer__nav-group">
+          <h4 class="footer__nav-title">Services</h4>
+          <ul class="footer__nav-list" role="list">
+            <li><a href="/services.html#web" class="footer__nav-link">Développement Web</a></li>
+            <li><a href="/services.html#sig" class="footer__nav-link">Solutions SIG</a></li>
+            <li><a href="/services.html#data" class="footer__nav-link">Data &amp; IA</a></li>
+            <li><a href="/services.html#consulting" class="footer__nav-link">Consulting</a></li>
+          </ul>
+        </div>
+        <div class="footer__nav-group">
+          <h4 class="footer__nav-title">Entreprise</h4>
+          <ul class="footer__nav-list" role="list">
+            <li><a href="/about.html" class="footer__nav-link">À propos</a></li>
+            <li><a href="/index.html#projets" class="footer__nav-link">Nos projets</a></li>
+            <li><a href="/contact.html" class="footer__nav-link">Contact</a></li>
+            <li><a href="#audit-info" class="footer__nav-link">Audit gratuit</a></li>
+          </ul>
+        </div>
+        <div class="footer__nav-group">
+          <h4 class="footer__nav-title">Contact</h4>
+          <ul class="footer__contact-list" role="list">
+            <li>
+              <a href="tel:+33605861840" class="footer__contact-item" aria-label="Appeler le 06 05 86 18 40">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.47 11.47 0 003.59.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.01l-2.2 2.21z" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                06 05 86 18 40
+              </a>
+            </li>
+            <li>
+              <a href="mailto:anarouz.contact01@gmail.com" class="footer__contact-item" aria-label="Envoyer un email">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.75"/><path d="M2 7l10 7 10-7" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>
+                anarouz.contact01@gmail.com
+              </a>
+            </li>
+            <li>
+              <a href="https://www.linkedin.com/in/badreddine-hamya-268321a9" target="_blank" rel="noopener noreferrer" class="footer__contact-item" aria-label="Profil LinkedIn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="4" stroke="currentColor" stroke-width="1.75"/><path d="M7 10v7M7 7v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M11 17v-4a2 2 0 014 0v4M11 10v7" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>
+                LinkedIn
+              </a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+    </div>
+    <div class="footer__bottom">
+      <div class="container">
+        <p class="footer__copy">
+          &copy; 2026 Anarouz. Tous droits réservés. —
+          <a href="/services.html" class="footer__copy-link">Développement web sur mesure</a>,
+          <a href="/services.html#sig" class="footer__copy-link">solutions SIG</a> &amp;
+          <a href="/services.html#data" class="footer__copy-link">intelligence géospatiale</a>
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/script.js"></script>
+  <script>
+    (function () {
+      const EMAILJS_SERVICE_ID  = 'service_slpfiw8';
+      const EMAILJS_TEMPLATE_ID = 'template_h9kne23';
+
+      const form        = document.getElementById('contact-form');
+      const successEl   = document.getElementById('form-success');
+      const submitBtn   = document.getElementById('form-submit-btn');
+      const globalError = document.getElementById('form-global-error');
+
+      if (!form) return;
+
+      /* ── Validation ──────────────────────────────────────── */
+      function validateField(field) {
+        const isEmpty = field.type === 'checkbox'
+          ? !field.checked
+          : !field.value.trim();
+
+        const errorEl = field.parentElement.querySelector('.form-error-msg');
+
+        if (isEmpty) {
+          field.classList.add('form-input--error', 'form-select--error', 'form-textarea--error');
+          if (errorEl) errorEl.classList.add('visible');
+          return false;
+        }
+
+        // Email format check
+        if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value.trim())) {
+          field.classList.add('form-input--error');
+          if (errorEl) { errorEl.textContent = 'Adresse email invalide.'; errorEl.classList.add('visible'); }
+          return false;
+        }
+
+        field.classList.remove('form-input--error', 'form-select--error', 'form-textarea--error');
+        if (errorEl) errorEl.classList.remove('visible');
+        return true;
+      }
+
+      /* ── Reset border on user input ──────────────────────── */
+      form.querySelectorAll('.form-input, .form-select, .form-textarea, .form-checkbox')
+        .forEach(field => {
+          field.addEventListener('input',  () => validateField(field));
+          field.addEventListener('change', () => validateField(field));
+        });
+
+      /* ── Loading state helpers ───────────────────────────── */
+      function setLoading(on) {
+        submitBtn.classList.toggle('btn--loading', on);
+        submitBtn.setAttribute('aria-busy', String(on));
+      }
+
+      /* ── Submit ──────────────────────────────────────────── */
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        globalError.classList.remove('visible');
+
+        // Validate all required fields
+        let valid = true;
+        form.querySelectorAll('[required]').forEach(field => {
+          if (!validateField(field)) valid = false;
+        });
+        if (!valid) return;
+
+        setLoading(true);
+
+        emailjs.sendForm(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, this)
+          .then(function () {
+            // Succès — affiche le message de confirmation
+            form.style.display    = 'none';
+            successEl.style.display = 'block';
+            successEl.focus();
+          })
+          .catch(function (error) {
+            // Échec — affiche le bandeau d'erreur et remet le bouton actif
+            console.error('EmailJS error:', error);
+            globalError.classList.add('visible');
+            setLoading(false);
+          });
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,447 @@
+/* Styles pour l'arborescence de documents */
+.folder-tree {
+    font-size: 0.9rem;
+}
+
+.folder-item {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 0.375rem;
+}
+
+.folder-item:hover {
+    background-color: #F3F4F6;
+}
+
+.folder-item.selected {
+    background-color: #EFF6FF;
+    border-left: 3px solid #1E3A8A;
+}
+
+.folder-children {
+    margin-left: 1.5rem;
+    border-left: 1px dashed #E5E7EB;
+    padding-left: 0.75rem;
+}
+
+.document-item {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 0.375rem;
+    border: 1px solid transparent;
+}
+
+.document-item:hover {
+    background-color: #F9FAFB;
+    border-color: #E5E7EB;
+}
+
+.document-item.selected {
+    background-color: #EFF6FF;
+    border-color: #1E3A8A;
+}
+
+.version-badge {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 1rem;
+    background-color: #E5E7EB;
+    color: #4B5563;
+}
+
+.version-badge.current {
+    background-color: #1E3A8A;
+    color: white;
+}
+
+.version-timeline {
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.version-timeline::before {
+    content: '';
+    position: absolute;
+    left: 0.5rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: #E5E7EB;
+}
+
+.version-item {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.version-item::before {
+    content: '';
+    position: absolute;
+    left: -1.25rem;
+    top: 0.5rem;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    background-color: #9CA3AF;
+    border: 2px solid white;
+}
+
+.version-item.current::before {
+    background-color: #1E3A8A;
+}
+
+.version-item:hover {
+    background-color: #F9FAFB;
+}
+
+/* Visualiseur PDF */
+.pdf-viewer {
+    height: calc(100vh - 12rem);
+    overflow-y: auto;
+    background-color: #F3F4F6;
+    border-radius: 0.5rem;
+    position: relative;
+}
+
+.pdf-page {
+    background: white;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1rem;
+    border-radius: 0.375rem;
+    overflow: hidden;
+}
+
+.pdf-controls {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 10;
+    border-bottom: 1px solid #E5E7EB;
+}
+
+/* Sidebar de visualisation */
+.document-viewer-sidebar {
+    position: fixed;
+    right: 0;
+    top: 4rem;
+    bottom: 0;
+    width: 40%;
+    background: white;
+    box-shadow: -4px 0 10px rgba(0, 0, 0, 0.05);
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+    z-index: 45;
+    border-left: 1px solid #E5E7EB;
+}
+
+.document-viewer-sidebar.open {
+    transform: translateX(0);
+}
+
+@media (max-width: 768px) {
+    .document-viewer-sidebar {
+        width: 90%;
+    }
+}
+
+/* Version comparison */
+.version-compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    height: calc(100vh - 16rem);
+}
+
+.version-compare-item {
+    background: #F9FAFB;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Animations */
+@keyframes slideIn {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+
+@keyframes slideOut {
+    from { transform: translateX(0); }
+    to { transform: translateX(100%); }
+}
+
+.document-viewer-sidebar {
+    animation-duration: 0.3s;
+    animation-fill-mode: forwards;
+}
+
+.document-viewer-sidebar.open {
+    animation-name: slideIn;
+}
+
+.document-viewer-sidebar:not(.open) {
+    animation-name: slideOut;
+}
+
+/* Styles pour la sidebar contextuelle */
+.context-sidebar {
+    position: fixed;
+    right: 0;
+    top: 4rem;
+    bottom: 0;
+    width: 30%;
+    background: white;
+    box-shadow: -4px 0 10px rgba(0, 0, 0, 0.05);
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+    z-index: 45;
+    border-left: 1px solid #E5E7EB;
+    display: flex;
+    flex-direction: column;
+}
+
+.context-sidebar.open {
+    transform: translateX(0);
+}
+
+@media (max-width: 768px) {
+    .context-sidebar {
+        width: 85%;
+    }
+}
+
+/* Contenu principal avec sidebar ouverte */
+.main-content.with-sidebar {
+    margin-right: 30%;
+    transition: margin-right 0.3s ease-in-out;
+}
+
+@media (max-width: 768px) {
+    .main-content.with-sidebar {
+        margin-right: 0;
+    }
+}
+
+/* Actions sur les éléments */
+.action-button {
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.action-button:hover {
+    background-color: #F3F4F6;
+    border-color: #E5E7EB;
+    transform: translateY(-1px);
+}
+
+.action-button.danger:hover {
+    background-color: #FEE2E2;
+    border-color: #FCA5A5;
+    color: #DC2626;
+}
+
+/* Badges et indicateurs */
+.type-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.type-badge.folder {
+    background-color: #FEF3C7;
+    color: #92400E;
+}
+
+.type-badge.document {
+    background-color: #DBEAFE;
+    color: #1E40AF;
+}
+
+/* Propriétés du document */
+.property-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem;
+    border-bottom: 1px solid #F3F4F6;
+}
+
+.property-label {
+    color: #6B7280;
+    font-size: 0.875rem;
+}
+
+.property-value {
+    font-weight: 500;
+    color: #1F2937;
+    font-size: 0.875rem;
+}
+
+/* Version timeline améliorée */
+.version-timeline-compact {
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.version-item-compact {
+    position: relative;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.version-item-compact:hover {
+    background-color: #F9FAFB;
+    border-color: #E5E7EB;
+}
+
+.version-item-compact.current {
+    background-color: #EFF6FF;
+    border-color: #1E3A8A;
+}
+
+.version-item-compact.current::before {
+    content: '';
+    position: absolute;
+    left: -0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0.25rem;
+    height: 2rem;
+    background-color: #1E3A8A;
+    border-radius: 0.125rem;
+}
+
+.version-indicator {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
+.version-indicator.current {
+    background-color: #1E3A8A;
+    box-shadow: 0 0 0 2px #BFDBFE;
+}
+
+.version-indicator.old {
+    background-color: #9CA3AF;
+}
+
+/* Actions menu */
+.actions-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #E5E7EB;
+    min-width: 200px;
+    z-index: 60;
+    display: none;
+}
+
+.actions-menu.show {
+    display: block;
+}
+
+.actions-menu-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.actions-menu-item:hover {
+    background-color: #F3F4F6;
+}
+
+.actions-menu-item.danger:hover {
+    background-color: #FEE2E2;
+    color: #DC2626;
+}
+
+.actions-menu-item svg {
+    margin-right: 0.75rem;
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+/* Preview de document */
+.document-preview {
+    background-color: #F9FAFB;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid #E5E7EB;
+}
+
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #E5E7EB;
+}
+
+.preview-thumbnail {
+    width: 100%;
+    height: 150px;
+    background: linear-gradient(135deg, #E5E7EB 0%, #D1D5DB 100%);
+    border-radius: 0.375rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #4B5563;
+    margin-bottom: 1rem;
+}
+
+/* Zoom controls */
+.zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: white;
+    border-radius: 2rem;
+    padding: 0.25rem;
+    border: 1px solid #E5E7EB;
+}
+
+.zoom-btn {
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: white;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.zoom-btn:hover {
+    background-color: #F3F4F6;
+}
+
+.zoom-level {
+    font-size: 0.875rem;
+    color: #4B5563;
+    min-width: 3rem;
+    text-align: center;
+}

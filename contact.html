@@ -768,6 +768,7 @@
     (function () {
       const EMAILJS_SERVICE_ID  = 'service_slpfiw8';
       const EMAILJS_TEMPLATE_ID = 'template_h9kne23';
+      const EMAILJS_TEMPLATE_ID_Admin = 'template_h7txkre';
 
       const form        = document.getElementById('contact-form');
       const successEl   = document.getElementById('form-success');
@@ -830,6 +831,20 @@
         setLoading(true);
 
         emailjs.sendForm(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, this)
+          .then(function () {
+            // Succès — affiche le message de confirmation
+            form.style.display    = 'none';
+            successEl.style.display = 'block';
+            successEl.focus();
+          })
+          .catch(function (error) {
+            // Échec — affiche le bandeau d'erreur et remet le bouton actif
+            console.error('EmailJS error:', error);
+            globalError.classList.add('visible');
+            setLoading(false);
+          });
+
+        emailjs.sendForm(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID_Admin, this)
           .then(function () {
             // Succès — affiche le message de confirmation
             form.style.display    = 'none';

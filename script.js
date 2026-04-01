@@ -1,27 +1,67 @@
-// ── Mobile navigation toggle ──────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// MOBILE NAVIGATION — burger, overlay, ESC, iOS scroll-lock
+// ─────────────────────────────────────────────────────────────────────────────
 const navToggle = document.querySelector('.nav__toggle');
 const navMenu   = document.querySelector('.nav__menu');
 
-if (navToggle && navMenu) {
-  navToggle.addEventListener('click', () => {
-    const isOpen = navMenu.classList.toggle('open');
-    navToggle.setAttribute('aria-expanded', String(isOpen));
-    navToggle.setAttribute('aria-label', isOpen ? 'Fermer le menu' : 'Ouvrir le menu');
-    document.body.style.overflow = isOpen ? 'hidden' : '';
-  });
-
-  // Close when a link is clicked (mobile)
-  navMenu.querySelectorAll('a').forEach(link => {
-    link.addEventListener('click', () => {
-      navMenu.classList.remove('open');
-      navToggle.setAttribute('aria-expanded', 'false');
-      navToggle.setAttribute('aria-label', 'Ouvrir le menu');
-      document.body.style.overflow = '';
-    });
-  });
+// Créer l'overlay backdrop une seule fois
+let navOverlay = document.querySelector('.nav-overlay');
+if (!navOverlay && navMenu) {
+  navOverlay = document.createElement('div');
+  navOverlay.className = 'nav-overlay';
+  navOverlay.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(navOverlay);
 }
 
-// ── Sticky header shadow on scroll ───────────────────────────────────────
+function openMenu() {
+  navMenu.classList.add('open');
+  navOverlay && navOverlay.classList.add('open');
+  navToggle.setAttribute('aria-expanded', 'true');
+  navToggle.setAttribute('aria-label', 'Fermer le menu');
+  // Scroll-lock (iOS-safe)
+  document.documentElement.style.overflow = 'hidden';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeMenu() {
+  navMenu.classList.remove('open');
+  navOverlay && navOverlay.classList.remove('open');
+  navToggle.setAttribute('aria-expanded', 'false');
+  navToggle.setAttribute('aria-label', 'Ouvrir le menu');
+  document.documentElement.style.overflow = '';
+  document.body.style.overflow = '';
+}
+
+if (navToggle && navMenu) {
+  // Toggle au clic du burger
+  navToggle.addEventListener('click', () => {
+    const isOpen = navMenu.classList.contains('open');
+    isOpen ? closeMenu() : openMenu();
+  });
+
+  // Fermer au clic sur un lien du menu
+  navMenu.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', closeMenu);
+  });
+
+  // Fermer au clic sur l'overlay
+  navOverlay && navOverlay.addEventListener('click', closeMenu);
+
+  // Fermer avec la touche ESC
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && navMenu.classList.contains('open')) closeMenu();
+  });
+
+  // Fermer si la fenêtre est redimensionnée au-delà du breakpoint mobile
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 768 && navMenu.classList.contains('open')) closeMenu();
+  }, { passive: true });
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STICKY HEADER — ombre au scroll
+// ─────────────────────────────────────────────────────────────────────────────
 const header = document.querySelector('.header');
 if (header) {
   window.addEventListener('scroll', () => {
@@ -29,7 +69,10 @@ if (header) {
   }, { passive: true });
 }
 
-// ── Scroll-triggered fade-in (Intersection Observer) ─────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCROLL ANIMATIONS — IntersectionObserver (.animate-in → .visible)
+// ─────────────────────────────────────────────────────────────────────────────
 const animEls = document.querySelectorAll('.animate-in');
 
 if (animEls.length) {
@@ -45,24 +88,27 @@ if (animEls.length) {
 
     animEls.forEach(el => observer.observe(el));
   } else {
-    // Fallback for older browsers
+    // Fallback navigateurs anciens
     animEls.forEach(el => el.classList.add('visible'));
   }
 }
 
-// ── Google Analytics + Cookie Consent (RGPD) ─────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GOOGLE ANALYTICS + COOKIE CONSENT (RGPD)
+// GA chargé uniquement après acceptation explicite de l'utilisateur
+// ─────────────────────────────────────────────────────────────────────────────
 const GA_ID       = 'G-49N1TGYH5W';
 const CONSENT_KEY = 'anarouz_cookie_consent';
 
-/** Charge GA4 dynamiquement — appelé uniquement après acceptation */
+/** Charge GA4 dynamiquement */
 function loadGA() {
-  if (document.getElementById('ga-script')) return; // déjà chargé
+  if (document.getElementById('ga-script')) return;
   const s = document.createElement('script');
   s.id    = 'ga-script';
   s.async = true;
   s.src   = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
   document.head.appendChild(s);
-
   window.dataLayer = window.dataLayer || [];
   function gtag() { dataLayer.push(arguments); }
   window.gtag = gtag;
@@ -70,7 +116,7 @@ function loadGA() {
   gtag('config', GA_ID, { anonymize_ip: true });
 }
 
-/** Crée et affiche le bandeau de consentement */
+/** Crée et affiche le bandeau cookie */
 function showCookieBanner() {
   if (document.getElementById('cookie-banner')) return;
 
@@ -94,7 +140,6 @@ function showCookieBanner() {
   `;
   document.body.appendChild(banner);
 
-  // Déclenche l'animation d'entrée
   requestAnimationFrame(() => {
     requestAnimationFrame(() => banner.classList.add('cookie-banner--visible'));
   });
@@ -117,15 +162,12 @@ function showCookieBanner() {
   });
 }
 
-// ── Initialisation du consentement ────────────────────────────────────────
+// Initialisation consentement
 (function initConsent() {
   const consent = localStorage.getItem(CONSENT_KEY);
   if (consent === 'accepted') {
-    // Consentement déjà donné → charger GA immédiatement
     loadGA();
   } else if (!consent) {
-    // Pas encore de choix → afficher le bandeau après 1 s
     window.addEventListener('load', () => setTimeout(showCookieBanner, 1000));
   }
-  // Si 'refused' : ne rien faire, pas de GA
 })();

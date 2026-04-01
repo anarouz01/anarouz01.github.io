@@ -22,7 +22,7 @@
     --dpe-d:#F3C010;--dpe-e:#E67E22;--dpe-f:#E74C3C;--dpe-g:#8E1010;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--txt);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+  body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--txt);height:100dvh;width:100dvw;overflow:hidden;display:flex;flex-direction:column}
 
   /* SPLASH */
   .splash{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;transition:opacity .5s}
@@ -41,13 +41,13 @@
   .prog-label{font-size:10px;color:var(--txt2);white-space:nowrap;min-width:200px}
 
   /* HEADER */
-  header{height:56px;background:#0A1520;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;padding:0 18px;flex-shrink:0;z-index:1000}
-  .logo{display:flex;align-items:center;gap:8px}
+  header{height:56px;background:#0A1520;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;padding:0 18px;flex-shrink:0;z-index:1000;min-width:0;overflow:hidden}
+  .logo{display:flex;align-items:center;gap:8px;flex-shrink:0}
   .logo-icon{width:30px;height:30px;background:linear-gradient(135deg,var(--accdark),var(--accent));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
   .logo-text{font-size:17px;font-weight:700}.logo-text span{color:var(--accent)}
   .logo-sub{font-size:9px;color:var(--txt2);letter-spacing:.04em}
-  .hdiv{width:1px;height:32px;background:var(--border)}
-  .search-wrap{position:relative;flex:1;max-width:320px}
+  .hdiv{width:1px;height:32px;background:var(--border);flex-shrink:0}
+  .search-wrap{position:relative;flex:1;min-width:0;max-width:320px}
   .search{display:flex;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:0 10px;height:34px;gap:8px;width:100%}
   .search input{background:none;border:none;color:var(--txt);font-size:13px;outline:none;width:100%}
   .suggestions{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:8px;z-index:2000;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.5);display:none}
@@ -72,7 +72,7 @@
   .btn-p{background:var(--accdark);color:#fff}.btn-p:hover{background:var(--accent)}
 
   /* MAIN 3-COL */
-  .main{display:grid;grid-template-columns:25% 1fr 25%;flex:1;min-height:0}
+  .main{display:grid;grid-template-columns:220px 1fr 240px;flex:1;min-height:0;min-width:0}
 
   /* SIDEBAR */
   .sidebar{background:var(--card);border-right:1px solid var(--border);padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
@@ -98,8 +98,33 @@
   .map-badge{position:absolute;top:10px;right:10px;z-index:800;background:rgba(13,27,42,.82);backdrop-filter:blur(4px);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:10px;color:var(--txt2)}
   .map-badge strong{color:var(--txt)}
 
+  /* BOUTONS CARTE personnalisés */
+  .map-controls{position:absolute;bottom:14px;left:10px;z-index:800;display:flex;flex-direction:column;gap:4px}
+  .map-ctrl-btn{width:30px;height:30px;background:rgba(13,27,42,.88);backdrop-filter:blur(4px);border:1px solid var(--border);border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--txt);font-size:14px;font-weight:700;transition:all .15s;user-select:none;line-height:1}
+  .map-ctrl-btn:hover{background:var(--accdark);border-color:var(--accent);color:#fff}
+  .map-ctrl-sep{height:1px;background:var(--border);margin:2px 0}
+
+  /* PLEIN ÉCRAN */
+  .map-wrap.fullscreen{position:fixed;inset:0;z-index:8000;width:100vw;height:100vh}
+  .map-wrap.fullscreen #map{width:100%;height:100%}
+  .map-wrap.fullscreen .map-controls{bottom:20px;left:14px}
+  .map-wrap.fullscreen .map-badge{top:14px;right:14px}
+  .map-wrap.fullscreen .basemap-panel{bottom:20px;left:50px}
+
+  /* SÉLECTEUR FONDS DE CARTE */
+  .basemap-panel{position:absolute;bottom:14px;left:50px;z-index:800;background:rgba(13,27,42,.95);backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:10px;padding:10px 10px 8px;display:none;flex-wrap:wrap;gap:7px;width:222px;box-shadow:0 8px 28px rgba(0,0,0,.55)}
+  .basemap-panel.open{display:flex}
+  .basemap-panel-title{width:100%;font-size:9px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px}
+  .bmap-thumb{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border-radius:7px;padding:4px;border:2px solid transparent;transition:border-color .15s,background .15s;width:calc(33.33% - 5px)}
+  .bmap-thumb:hover{border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.04)}
+  .bmap-thumb.active{border-color:var(--accent)}
+  .bmap-thumb.active .bmap-name{color:var(--accent);font-weight:700}
+  .bmap-img{width:100%;aspect-ratio:1;border-radius:4px;object-fit:cover;background:var(--border);display:block}
+  .bmap-name{font-size:8px;color:var(--txt2);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;padding:0 2px}
+  .map-ctrl-btn.active{background:var(--accdark);border-color:var(--accent);color:#fff}
+
   /* BOTTOM STRIP */
-  .bottom-strip{flex-shrink:0;height:25%;background:#0A1520;border-top:1px solid var(--border);display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1.3fr) 1px minmax(0,1fr) 1px minmax(0,1fr);overflow:hidden}
+  .bottom-strip{flex-shrink:0;height:148px;background:#0A1520;border-top:1px solid var(--border);display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1.3fr) 1px minmax(0,1fr) 1px minmax(0,1fr);overflow:hidden}
   .bstrip-div{background:var(--border)}
   .bstrip-panel{padding:10px 14px;display:flex;flex-direction:column;gap:6px;overflow:hidden;min-width:0}
   .bstrip-title{font-size:9px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0}
@@ -189,6 +214,68 @@
 
   /* SCROLLBAR */
   ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+  /* ── RESPONSIVE : tablette paysage (768–1180px) ── */
+  @media (max-width:1180px) {
+    header{gap:10px;padding:0 12px}
+    .logo-sub{display:none}
+    .hdiv{display:none}
+    .search-wrap{max-width:200px}
+    .btn{padding:5px 9px;font-size:10px}
+    .city-btn{padding:5px 9px;font-size:10px}
+    .main{grid-template-columns:188px 1fr 200px}
+    .sidebar{padding:10px;gap:8px}
+    .rpanel{padding:10px;gap:10px}
+    .fcard{padding:9px}
+    .kpi-val{font-size:18px}
+    .bottom-strip{height:130px}
+    .bstrip-panel{padding:8px 10px}
+    .bstrip-title{font-size:8px}
+    .per-lbl{width:48px;font-size:7px}
+    .score-ring{width:52px;height:52px}
+    .score-ring svg{width:52px;height:52px}
+  }
+
+  /* ── RESPONSIVE : petite tablette paysage (≤900px) ── */
+  @media (max-width:900px) {
+    header{height:48px;gap:8px;padding:0 10px}
+    .logo-text{font-size:14px}
+    .logo-icon{width:26px;height:26px;font-size:13px}
+    .search-wrap{max-width:160px}
+    .main{grid-template-columns:164px 1fr 180px}
+    .kpi-grid{gap:5px}
+    .kpi{padding:7px}
+    .kpi-val{font-size:16px}
+    .kpi-lbl{font-size:8px}
+    .chart-wrap{padding:9px}
+    .chart-title{font-size:9px;margin-bottom:7px}
+    .bottom-strip{height:120px;grid-template-columns:minmax(0,1fr) 1px minmax(0,1.2fr) 1px minmax(0,1fr) 1px minmax(0,1fr)}
+    .bstrip-panel{padding:6px 8px;gap:4px}
+    .type-pill{padding:4px 6px}
+    .type-icon{font-size:11px}
+    .per-lbl{width:40px}
+    .score-ring{width:44px;height:44px}
+    .score-ring svg{width:44px;height:44px}
+    .score-ring-val{font-size:13px}
+    .score-leg-row{font-size:7px}
+    .heat-bar-bg{width:56px}
+    .hbtns .btn-o{display:none} /* masque "Exporter" sur petits écrans */
+  }
+
+  /* ── RESPONSIVE : très petite tablette / grand mobile paysage (≤768px) ── */
+  @media (max-width:768px) {
+    header{height:44px;padding:0 8px;gap:6px}
+    .logo-text{font-size:13px}
+    .search-wrap{display:none} /* masque la recherche */
+    .city-btn{padding:4px 8px;font-size:9px}
+    .main{grid-template-columns:0 1fr 0;position:relative}
+    .sidebar{display:none} /* sidebars masquées, accessibles via overlay futur */
+    .rpanel{display:none}
+    .bottom-strip{height:110px;grid-template-columns:minmax(0,1fr) 1px minmax(0,1.2fr) 1px minmax(0,1fr)}
+    /* masque le 4e panneau (score) sur très petits écrans */
+    .bottom-strip > .bstrip-panel:last-child,
+    .bottom-strip > .bstrip-div:nth-child(6){display:none}
+  }
 </style>
 </head>
 <body>
@@ -232,7 +319,7 @@
   </div>
   <div class="hbtns">
     <button class="btn btn-o" onclick="exportCSV()">⬇ Exporter</button>
-    <button class="btn btn-p">📊 Rapport</button>
+    <button class="btn btn-p" onclick="generateReport()">📊 Rapport PDF</button>
   </div>
 </header>
 
@@ -315,13 +402,29 @@
   <!-- CENTER: MAP + BOTTOM STRIP -->
   <div class="center-col">
 
-    <div class="map-wrap">
+    <div class="map-wrap" id="mapWrap">
       <div id="map"></div>
+
+      <!-- Badge haut droite -->
       <div class="map-badge">
-        <strong id="mapCount">0</strong> affichés
+        <strong id="mapCount">0</strong> dans la vue
+        <span id="mapTotal" style="color:var(--txt2)"></span>
         &nbsp;·&nbsp;
         <span style="cursor:pointer;color:var(--accent)" onclick="zoomToExtent()" title="Zoom sur l'étendue">⊞ Tout voir</span>
       </div>
+
+      <!-- Boutons bas gauche -->
+      <div class="map-controls">
+        <div class="map-ctrl-btn" onclick="map.zoomIn()" title="Zoom +">+</div>
+        <div class="map-ctrl-btn" onclick="map.zoomOut()" title="Zoom −">−</div>
+        <div class="map-ctrl-sep"></div>
+        <div class="map-ctrl-btn" id="fsBtn" onclick="toggleFullscreen()" title="Plein écran">⛶</div>
+        <div class="map-ctrl-sep"></div>
+        <div class="map-ctrl-btn" id="bmapBtn" onclick="toggleBasemapPanel()" title="Fonds de carte">🗺</div>
+      </div>
+
+      <!-- Panneau fonds de carte -->
+      <div class="basemap-panel" id="basemapPanel"></div>
     </div>
 
     <!-- BOTTOM STRIP: 4 indicateurs -->
@@ -419,6 +522,8 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 // ─────────────────────────────────────────────────────────────
 // CONFIG
@@ -463,6 +568,7 @@ const DPE_LABELS = ['A','B','C','D','E','F','G'];
 // ─────────────────────────────────────────────────────────────
 let ALL   = [];   // all loaded records (grows as pages arrive)
 let FILT  = [];   // currently filtered records
+let VIEW  = [];   // FILT intersected with map viewport
 let TOTAL_API = null;   // total from API response
 let streaming = true;   // true while pages still loading
 
@@ -476,20 +582,125 @@ let activeGES = new Set(['A','B','C','D','E','F','G']);
 const map = L.map('map', {
   center: [45.188, 5.724],
   zoom: 13,
-  zoomControl: true,
+  zoomControl: false,   // boutons zoom custom en bas à gauche
   preferCanvas: true
 });
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap',
-  maxZoom: 19,
-  className: 'osm-dark'
-}).addTo(map);
-
-// Dark mode filter via CSS
+// Dark mode filter via CSS (uniquement pour OSM standard)
 const styleEl = document.createElement('style');
 styleEl.textContent = `.osm-dark{filter:brightness(.82) saturate(.65) hue-rotate(180deg) invert(1) hue-rotate(180deg)}`;
 document.head.appendChild(styleEl);
+
+// ─── FONDS DE CARTE ──────────────────────────────────────────────────────────
+// Tuile de référence Grenoble centre : z=12, x=2113, y=1469
+const BASEMAPS = [
+  {
+    id:      'osm',
+    name:    'OSM Standard',
+    url:     'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    opts:    { attribution:'© OpenStreetMap', maxZoom:19, className:'osm-dark' },
+    thumb:   'https://tile.openstreetmap.org/12/2113/1469.png',
+  },
+  {
+    id:      'carto-dark',
+    name:    'Carto Dark',
+    url:     'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    opts:    { attribution:'© CartoDB', maxZoom:19, subdomains:'abcd' },
+    thumb:   'https://a.basemaps.cartocdn.com/dark_all/12/2113/1469.png',
+  },
+  {
+    id:      'carto-light',
+    name:    'Carto Clair',
+    url:     'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    opts:    { attribution:'© CartoDB', maxZoom:19, subdomains:'abcd' },
+    thumb:   'https://a.basemaps.cartocdn.com/light_all/12/2113/1469.png',
+  },
+  {
+    id:      'topo',
+    name:    'Topo',
+    url:     'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+    opts:    { attribution:'© OpenTopoMap', maxZoom:17 },
+    thumb:   'https://a.tile.opentopomap.org/12/2113/1469.png',
+  },
+  {
+    id:      'satellite',
+    name:    'Satellite',
+    url:     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    opts:    { attribution:'© Esri', maxZoom:19 },
+    thumb:   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/12/1469/2113',
+  },
+  {
+    id:      'esri-topo',
+    name:    'Esri Topo',
+    url:     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    opts:    { attribution:'© Esri', maxZoom:19 },
+    thumb:   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/12/1469/2113',
+  },
+];
+
+let currentTileLayer = null;
+let currentBasemapId = 'osm';
+
+// Initialise le fond de carte OSM par défaut
+currentTileLayer = L.tileLayer(BASEMAPS[0].url, BASEMAPS[0].opts).addTo(map);
+
+// Construit les miniatures du panneau
+function buildBasemapPanel() {
+  const panel = document.getElementById('basemapPanel');
+  panel.innerHTML = '<div class="basemap-panel-title">Fond de carte</div>';
+  BASEMAPS.forEach(bm => {
+    const div = document.createElement('div');
+    div.className = 'bmap-thumb' + (bm.id === currentBasemapId ? ' active' : '');
+    div.dataset.id = bm.id;
+    div.title = bm.name;
+    div.onclick = () => switchBasemap(bm.id);
+    const img = document.createElement('img');
+    img.className = 'bmap-img';
+    img.src = bm.thumb;
+    img.alt = bm.name;
+    img.loading = 'lazy';
+    img.onerror = () => { img.style.background = 'var(--border)'; img.src = ''; };
+    const lbl = document.createElement('div');
+    lbl.className = 'bmap-name';
+    lbl.textContent = bm.name;
+    div.appendChild(img);
+    div.appendChild(lbl);
+    panel.appendChild(div);
+  });
+}
+
+function switchBasemap(id) {
+  if (id === currentBasemapId) { toggleBasemapPanel(false); return; }
+  const bm = BASEMAPS.find(b => b.id === id);
+  if (!bm) return;
+  if (currentTileLayer) map.removeLayer(currentTileLayer);
+  currentTileLayer = L.tileLayer(bm.url, bm.opts).addTo(map);
+  currentTileLayer.bringToBack();
+  currentBasemapId = id;
+  document.querySelectorAll('.bmap-thumb').forEach(el =>
+    el.classList.toggle('active', el.dataset.id === id)
+  );
+  toggleBasemapPanel(false);
+}
+
+function toggleBasemapPanel(force) {
+  const panel  = document.getElementById('basemapPanel');
+  const btn    = document.getElementById('bmapBtn');
+  const isOpen = panel.classList.contains('open');
+  const open   = force !== undefined ? force : !isOpen;
+  panel.classList.toggle('open', open);
+  btn.classList.toggle('active', open);
+}
+
+// Ferme le panneau si clic en dehors
+document.addEventListener('click', e => {
+  if (!e.target.closest('#basemapPanel') && !e.target.closest('#bmapBtn')) {
+    toggleBasemapPanel(false);
+  }
+});
+
+// Construit le panneau au démarrage
+buildBasemapPanel();
 
 let clusterMode = true;  // cluster ON par défaut
 
@@ -513,6 +724,15 @@ function toggleCluster(enabled) {
   map.addLayer(clusters);
   addMarkersFromBatch(FILT);
 }
+
+// ── Mise à jour widgets sur déplacement/zoom carte ──
+let _viewDebounce = null;
+map.on('moveend zoomend', () => {
+  clearTimeout(_viewDebounce);
+  _viewDebounce = setTimeout(() => {
+    if (FILT.length > 0) updateAll();
+  }, 120);
+});
 
 // ─────────────────────────────────────────────────────────────
 // PARSE RAW API RECORD
@@ -605,28 +825,49 @@ function addMarkersFromBatch(records) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// VIEWPORT FILTER
+// ─────────────────────────────────────────────────────────────
+function computeView() {
+  const bounds = map.getBounds();
+  VIEW = FILT.filter(d => bounds.contains([d.lat, d.lng]));
+}
+
+// ─────────────────────────────────────────────────────────────
 // WIDGET UPDATES
 // ─────────────────────────────────────────────────────────────
 function updateAll() {
-  const n = FILT.length;
-  document.getElementById('kpiTotal').textContent   = n.toLocaleString('fr-FR');
-  document.getElementById('mapCount').textContent   = n.toLocaleString('fr-FR');
+  computeView();
+  const n    = VIEW.length;
+  const nAll = FILT.length;
 
-  const withCo2  = FILT.filter(d => d.co2  != null);
-  const withSurf = FILT.filter(d => d.surf != null);
+  document.getElementById('kpiTotal').textContent = n.toLocaleString('fr-FR');
+  document.getElementById('mapCount').textContent = n.toLocaleString('fr-FR');
+
+  // Badge "X dans la vue / Y filtrés"
+  const mapTotal = document.getElementById('mapTotal');
+  if (mapTotal) {
+    mapTotal.textContent = n < nAll ? ' / ' + nAll.toLocaleString('fr-FR') + ' filtrés' : '';
+  }
+
+  // Sous-titre KPI : indique si vue partielle
+  const kpiLbl = document.querySelector('#kpiTotal + .kpi-lbl') || document.querySelector('.kpi-wide .kpi-lbl');
+  if (kpiLbl) kpiLbl.textContent = n < nAll ? 'DANS LA VUE CARTE' : 'LOGEMENTS FILTRÉS';
+
+  const withCo2  = VIEW.filter(d => d.co2  != null);
+  const withSurf = VIEW.filter(d => d.surf != null);
   const avgCo2   = withCo2.length  ? Math.round(withCo2.reduce((s,d)=>s+d.co2,0)  / withCo2.length)  : null;
   const avgSurf  = withSurf.length ? Math.round(withSurf.reduce((s,d)=>s+d.surf,0) / withSurf.length) : null;
 
   document.getElementById('kpiAvgCo2').textContent  = avgCo2  != null ? avgCo2  : '—';
   document.getElementById('kpiAvgSurf').textContent = avgSurf != null ? avgSurf : '—';
 
-  const abCount  = FILT.filter(d => d.dpe === 'A' || d.dpe === 'B').length;
-  const fgCount  = FILT.filter(d => d.dpe === 'F' || d.dpe === 'G').length;
+  const abCount = VIEW.filter(d => d.dpe === 'A' || d.dpe === 'B').length;
+  const fgCount = VIEW.filter(d => d.dpe === 'F' || d.dpe === 'G').length;
   document.getElementById('kpiDpeA').textContent   = n ? Math.round(abCount/n*100) + '%' : '—';
   document.getElementById('kpiDpeEFG').textContent = n ? Math.round(fgCount/n*100) + '%' : '—';
 
-  updateBarChart('dpeChart', DPE_LABELS, FILT, d => d.dpe, DPE_COLORS);
-  updateBarChart('gesChart',  DPE_LABELS, FILT, d => d.ges, DPE_COLORS);
+  updateBarChart('dpeChart', DPE_LABELS, VIEW, d => d.dpe, DPE_COLORS);
+  updateBarChart('gesChart',  DPE_LABELS, VIEW, d => d.ges, DPE_COLORS);
   updateHeatChart();
   updateDpeChipCounts();
   updateBottomStrip();
@@ -648,7 +889,7 @@ function updateBarChart(containerId, keys, data, keyFn, colors) {
 
 function updateHeatChart() {
   const counts = {};
-  FILT.forEach(d => { if (d.heat) counts[d.heat] = (counts[d.heat]||0)+1; });
+  VIEW.forEach(d => { if (d.heat) counts[d.heat] = (counts[d.heat]||0)+1; });
   const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0, 8);
   const max = sorted.length ? sorted[0][1] : 1;
   document.getElementById('heatChart').innerHTML = sorted.map(([name, cnt]) => `
@@ -662,13 +903,13 @@ function updateHeatChart() {
 function updateDpeChipCounts() {
   document.querySelectorAll('.chip[data-dpe]').forEach(chip => {
     const key = chip.dataset.dpe;
-    const cnt = FILT.filter(d => d.dpe === key).length;
+    const cnt = VIEW.filter(d => d.dpe === key).length;
     const el = chip.querySelector('.chip-cnt');
     if (el) el.textContent = cnt.toLocaleString('fr-FR');
   });
   document.querySelectorAll('.chip[data-ges]').forEach(chip => {
     const key = chip.dataset.ges;
-    const cnt = FILT.filter(d => d.ges === key).length;
+    const cnt = VIEW.filter(d => d.ges === key).length;
     const el = chip.querySelector('.chip-cnt');
     if (el) el.textContent = cnt.toLocaleString('fr-FR');
   });
@@ -678,13 +919,13 @@ function updateDpeChipCounts() {
 // BOTTOM STRIP UPDATES
 // ─────────────────────────────────────────────────────────────
 function updateBottomStrip() {
-  const n = FILT.length;
+  const n = VIEW.length;
   if (!n) return;
 
   // ── 1. Périodes de construction ──
   const PERIODE_ORDER = ['avant 1948','1948-1974','1975-1977','1978-1982','1983-1988','1989-2000','2001-2005','2006-2012','2013-2021','2022 et après'];
   const perCounts = {};
-  FILT.forEach(d => { if (d.per) perCounts[d.per] = (perCounts[d.per]||0)+1; });
+  VIEW.forEach(d => { if (d.per) perCounts[d.per] = (perCounts[d.per]||0)+1; });
   const perSorted = PERIODE_ORDER.filter(p => perCounts[p]).map(p => [p, perCounts[p]]);
   const perMax = perSorted.length ? Math.max(...perSorted.map(([,c])=>c)) : 1;
   document.getElementById('perList').innerHTML = perSorted.map(([lbl, cnt]) => `
@@ -697,7 +938,7 @@ function updateBottomStrip() {
   // ── 2. Types de bâtiment ──
   const TYPE_ICONS = { maison:'🏠', appartement:'🏢', immeuble:'🏗️' };
   const typeCounts = {};
-  FILT.forEach(d => { if (d.type) typeCounts[d.type] = (typeCounts[d.type]||0)+1; });
+  VIEW.forEach(d => { if (d.type) typeCounts[d.type] = (typeCounts[d.type]||0)+1; });
   const typeSorted = Object.entries(typeCounts).sort((a,b)=>b[1]-a[1]).slice(0,3);
   document.getElementById('typePills').innerHTML = typeSorted.map(([type, cnt]) => `
     <div class="type-pill">
@@ -712,7 +953,7 @@ function updateBottomStrip() {
   // ── 3. CO₂ moyen par classe DPE ──
   const co2ByDpe = {};
   DPE_LABELS.forEach(k => co2ByDpe[k] = { sum:0, count:0 });
-  FILT.forEach(d => { if (d.dpe && d.co2 != null && co2ByDpe[d.dpe]) { co2ByDpe[d.dpe].sum += d.co2; co2ByDpe[d.dpe].count++; } });
+  VIEW.forEach(d => { if (d.dpe && d.co2 != null && co2ByDpe[d.dpe]) { co2ByDpe[d.dpe].sum += d.co2; co2ByDpe[d.dpe].count++; } });
   const co2Avgs = DPE_LABELS.map(k => ({ k, avg: co2ByDpe[k].count ? Math.round(co2ByDpe[k].sum / co2ByDpe[k].count) : 0 }));
   const co2Max = Math.max(...co2Avgs.map(d=>d.avg), 1);
   const barH = 76; // px height available
@@ -726,7 +967,7 @@ function updateBottomStrip() {
   // ── 4. Score DPE global (anneau) ──
   // Score : A=1 … G=7, moyenne → position arc
   const DPE_SCORE = {A:1,B:2,C:3,D:4,E:5,F:6,G:7};
-  const scorable = FILT.filter(d => d.dpe && DPE_SCORE[d.dpe]);
+  const scorable = VIEW.filter(d => d.dpe && DPE_SCORE[d.dpe]);
   const avgScore = scorable.length ? scorable.reduce((s,d)=>s+DPE_SCORE[d.dpe],0)/scorable.length : null;
   const scoreLabel = avgScore ? DPE_LABELS[Math.round(avgScore)-1] || 'D' : '—';
   const scoreColor = DPE_COLORS[scoreLabel] || '#555';
@@ -739,7 +980,7 @@ function updateBottomStrip() {
   // Légende top 3 classes
   const dpeCounts2 = {};
   DPE_LABELS.forEach(k => dpeCounts2[k]=0);
-  FILT.forEach(d=>{ if(d.dpe) dpeCounts2[d.dpe]++; });
+  VIEW.forEach(d=>{ if(d.dpe) dpeCounts2[d.dpe]++; });
   const top3 = DPE_LABELS.filter(k=>dpeCounts2[k]>0).sort((a,b)=>dpeCounts2[b]-dpeCounts2[a]).slice(0,4);
   document.getElementById('scoreLegend').innerHTML = top3.map(k => `
     <div class="score-leg-row">
@@ -1064,6 +1305,381 @@ function showSuggestions(results) {
 function hideSuggestions() {
   suggestions.classList.remove('open');
   suggestions.innerHTML = '';
+}
+
+// ─────────────────────────────────────────────────────────────
+// FULLSCREEN CARTE
+// ─────────────────────────────────────────────────────────────
+let _isFullscreen = false;
+
+function toggleFullscreen() {
+  const wrap = document.getElementById('mapWrap');
+  const btn  = document.getElementById('fsBtn');
+  _isFullscreen = !_isFullscreen;
+  wrap.classList.toggle('fullscreen', _isFullscreen);
+  btn.textContent   = _isFullscreen ? '✕' : '⛶';
+  btn.title         = _isFullscreen ? 'Quitter le plein écran' : 'Plein écran';
+  // Leaflet doit recalculer la taille après transition CSS
+  setTimeout(() => map.invalidateSize(), 50);
+}
+
+// Touche Échap pour quitter le plein écran
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && _isFullscreen) toggleFullscreen();
+});
+
+// ─────────────────────────────────────────────────────────────
+// GENERATE PDF REPORT
+// ─────────────────────────────────────────────────────────────
+function generateReport() {
+  if (!window.jspdf) { alert('Bibliothèque PDF non chargée, réessayez dans un instant.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  // ── Constantes mise en page ──
+  const PW = 210, PH = 297, ML = 15, MR = 15, MT = 32, MB = 20;
+  const CW = PW - ML - MR;
+  const CITY = CITIES[currentCity];
+  const now  = new Date();
+  const dateStr = now.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric' });
+  const timeStr = now.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+
+  // ── Couleurs ──
+  const C_BG  = [13,27,42], C_ACC = [0,180,216], C_TXT = [232,244,253], C_TXT2 = [139,172,200];
+  const DPE_RGB = { A:[27,115,64],B:[39,174,96],C:[130,195,65],D:[243,192,16],E:[230,126,34],F:[231,76,60],G:[142,16,16] };
+
+  // ── Helpers ──
+  function drawHeader() {
+    doc.setFillColor(...C_BG);
+    doc.rect(0, 0, PW, 28, 'F');
+    doc.setFillColor(...C_ACC);
+    doc.roundedRect(ML, 7, 13, 13, 2, 2, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text('E', ML+4, 15);
+    doc.setTextColor(...C_TXT);
+    doc.setFontSize(13); doc.setFont('helvetica','bold');
+    doc.text('Ener', ML+16, 14);
+    doc.setTextColor(...C_ACC);
+    doc.text('Map', ML+29, 14);
+    doc.setTextColor(...C_TXT2);
+    doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(CITY.label.toUpperCase() + '  ·  ' + dateStr, ML+16, 19);
+    doc.setTextColor(...C_TXT);
+    doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text('RAPPORT DE PERFORMANCE ENERGETIQUE', PW-MR, 16, { align:'right' });
+    doc.setTextColor(0,180,216);
+    doc.setLineWidth(0.5); doc.line(0, 28, PW, 28);
+  }
+
+  function drawFooter(pageNum) {
+    doc.setFillColor(...C_BG);
+    doc.rect(0, PH-16, PW, 16, 'F');
+    doc.setTextColor(...C_TXT2);
+    doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text('Source : ADEME - DPE Logements existants (dpe03existant) - Licence Etalab 2.0 - Genere le ' + dateStr + ' a ' + timeStr, ML, PH-7);
+    doc.setTextColor(...C_ACC);
+    doc.text('Page ' + pageNum, PW-MR, PH-7, { align:'right' });
+  }
+
+  function secTitle(text, y) {
+    doc.setFillColor(...C_ACC);
+    doc.rect(ML, y, 3, 6, 'F');
+    doc.setTextColor(...C_BG);
+    doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    doc.text(text, ML+5, y+4.5);
+    doc.setDrawColor(200,225,240); doc.setLineWidth(0.2);
+    doc.line(ML+5, y+6.5, PW-MR, y+6.5);
+    return y + 10;
+  }
+
+  function barRow(label, cnt, total, maxCnt, x, y, w, color) {
+    const pct  = total ? (cnt/total*100).toFixed(1) : '0.0';
+    const fill = maxCnt ? Math.max(1, Math.round(cnt/maxCnt*(w-28))) : 0;
+    doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(60,80,100);
+    const shortLbl = label.length > 24 ? label.slice(0,22)+'...' : label;
+    doc.text(shortLbl, x, y+3.5);
+    doc.setFillColor(230,240,248);
+    doc.roundedRect(x, y+4.5, w-28, 4, 1, 1, 'F');
+    if (fill > 0) { doc.setFillColor(...color); doc.roundedRect(x, y+4.5, fill, 4, 1, 1, 'F'); }
+    doc.setTextColor(100,130,155);
+    doc.text(pct+'%', x+w-26, y+7.5, { align:'right' });
+    doc.text(cnt.toLocaleString('fr-FR'), x+w, y+7.5, { align:'right' });
+    return y + 11;
+  }
+
+  // ── Calcul données ──
+  const n = FILT.length;
+  const withCo2  = FILT.filter(d=>d.co2!=null);
+  const withSurf = FILT.filter(d=>d.surf!=null);
+  const avgCo2   = withCo2.length  ? Math.round(withCo2.reduce((s,d)=>s+d.co2,0)/withCo2.length)  : null;
+  const avgSurf  = withSurf.length ? Math.round(withSurf.reduce((s,d)=>s+d.surf,0)/withSurf.length) : null;
+  const abCount  = FILT.filter(d=>d.dpe==='A'||d.dpe==='B').length;
+  const fgCount  = FILT.filter(d=>d.dpe==='F'||d.dpe==='G').length;
+
+  const dpeCounts={}, gesCounts={};
+  DPE_LABELS.forEach(k=>{dpeCounts[k]=0; gesCounts[k]=0;});
+  FILT.forEach(d=>{ if(d.dpe) dpeCounts[d.dpe]++; if(d.ges) gesCounts[d.ges]++; });
+
+  const heatCounts={};
+  FILT.forEach(d=>{ if(d.heat) heatCounts[d.heat]=(heatCounts[d.heat]||0)+1; });
+  const heatSorted = Object.entries(heatCounts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+  const PERIODE_ORDER = ['avant 1948','1948-1974','1975-1977','1978-1982','1983-1988','1989-2000','2001-2005','2006-2012','2013-2021','2022 et apres'];
+  const perCounts={};
+  FILT.forEach(d=>{ if(d.per) perCounts[d.per]=(perCounts[d.per]||0)+1; });
+
+  const crossData={};
+  DPE_LABELS.forEach(k=>{ crossData[k]={appartement:0,maison:0,immeuble:0,total:0}; });
+  FILT.forEach(d=>{
+    if(d.dpe && crossData[d.dpe] && d.type) {
+      const t = d.type.toLowerCase();
+      if(crossData[d.dpe][t]!==undefined){ crossData[d.dpe][t]++; crossData[d.dpe].total++; }
+    }
+  });
+
+  // Lecture filtres actifs
+  const surfMinV = document.getElementById('surfMin').value;
+  const surfMaxV = document.getElementById('surfMax').value;
+  const periodeV = document.getElementById('periodeFilter').value;
+  const typeV    = document.getElementById('typeFilter').value;
+  const heatV    = document.getElementById('heatFilter').value;
+
+  const filterRows = [
+    ['Etiquettes DPE',       [...activeDPE].sort().join(', ') || 'Aucune'],
+    ['Etiquettes GES',       [...activeGES].sort().join(', ') || 'Aucune'],
+    ['Surface habitable',    surfMinV + ' m² → ' + (surfMaxV==='500' ? '500+ m²' : surfMaxV+' m²')],
+    ['Periode construction', periodeV || 'Toutes'],
+    ['Type de batiment',     typeV    || 'Tous'],
+    ['Energie de chauffage', heatV    || 'Toutes'],
+  ];
+
+  // ══════════════ PAGE 1 ══════════════
+  drawHeader();
+  let y = MT + 3;
+
+  // — Filtres —
+  y = secTitle('FILTRES APPLIQUES', y);
+  doc.autoTable({
+    startY: y, margin: { left: ML, right: MR },
+    head: [], body: filterRows,
+    styles: { fontSize: 7.5, cellPadding: 2.5 },
+    columnStyles: { 0:{ fontStyle:'bold', fillColor:[238,245,252], textColor:[13,27,42], cellWidth:52 }, 1:{ textColor:[50,70,90] } },
+    theme: 'grid', tableLineColor:[200,220,235], tableLineWidth:0.2,
+  });
+  y = doc.lastAutoTable.finalY + 7;
+
+  // — KPIs —
+  y = secTitle('INDICATEURS CLES', y);
+  const kW3 = (CW-6)/3;
+  const kpis3 = [
+    { val: n.toLocaleString('fr-FR'), lbl:'LOGEMENTS FILTRES', sub:'sur '+ALL.length.toLocaleString('fr-FR')+' DPEs '+CITY.label },
+    { val: avgCo2!=null ? avgCo2+' kg/m²' : '—', lbl:'EMISSIONS CO2 MOY.', sub:'kgCO2eq/m²/an' },
+    { val: avgSurf!=null ? avgSurf+' m²' : '—',  lbl:'SURFACE MOYENNE',    sub:'m² habitables' },
+  ];
+  kpis3.forEach((k,i) => {
+    const kx = ML + i*(kW3+3);
+    doc.setFillColor(238,248,253); doc.setDrawColor(180,215,235); doc.setLineWidth(0.3);
+    doc.roundedRect(kx, y, kW3, 18, 2, 2, 'FD');
+    doc.setTextColor(0,150,190); doc.setFontSize(14); doc.setFont('helvetica','bold');
+    doc.text(k.val, kx+kW3/2, y+10, { align:'center' });
+    doc.setTextColor(40,65,90); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text(k.lbl, kx+kW3/2, y+14, { align:'center' });
+    doc.setFont('helvetica','normal'); doc.setTextColor(120,150,175);
+    doc.text(k.sub, kx+kW3/2, y+17, { align:'center' });
+  });
+  y += 22;
+
+  const kW2 = (CW-4)/2;
+  const kpis2 = [
+    { val: n ? Math.round(abCount/n*100)+'%' : '—', lbl:'% CLASSE A + B', sub:'bonne performance' },
+    { val: n ? Math.round(fgCount/n*100)+'%' : '—', lbl:'% PASSOIRES (F + G)', sub:'logements energivores' },
+  ];
+  kpis2.forEach((k,i) => {
+    const kx = ML + i*(kW2+4);
+    doc.setFillColor(238,248,253); doc.setDrawColor(180,215,235); doc.setLineWidth(0.3);
+    doc.roundedRect(kx, y, kW2, 14, 2, 2, 'FD');
+    doc.setTextColor(0,150,190); doc.setFontSize(15); doc.setFont('helvetica','bold');
+    doc.text(k.val, kx+kW2/2, y+8, { align:'center' });
+    doc.setTextColor(40,65,90); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text(k.lbl, kx+kW2/2, y+12, { align:'center' });
+  });
+  y += 18;
+
+  // — Carte (placeholder) —
+  y = secTitle('CARTE - LOCALISATION DES LOGEMENTS', y);
+  doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(80,105,125);
+  doc.text('Visualisation des DPEs filtres sur la commune de '+CITY.label+'. La couleur de chaque marqueur correspond a la classe DPE (A=vert, G=rouge).', ML, y, { maxWidth: CW });
+  y += 7;
+
+  doc.setFillColor(240,248,255); doc.setDrawColor(185,215,235); doc.setLineWidth(0.3);
+  doc.roundedRect(ML, y, CW, 42, 2, 2, 'FD');
+  // Points simulés sur la carte
+  const mapCX = ML + CW/2, mapCY = y+18;
+  const pts = [[0,-8],[12,3],[-15,4],[8,10],[-8,-3],[3,12],[-12,-10],[18,-5]];
+  pts.forEach(([dx,dy],i) => {
+    const k = DPE_LABELS[i % 7];
+    doc.setFillColor(...DPE_RGB[k]);
+    doc.circle(mapCX+dx*0.9, mapCY+dy*0.8, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(5.5); doc.setFont('helvetica','bold');
+    doc.text(k, mapCX+dx*0.9, mapCY+dy*0.8+1.5, { align:'center' });
+  });
+  doc.setTextColor(100,130,155); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+  doc.text(n.toLocaleString('fr-FR')+' logements affiches', mapCX, y+36, { align:'center' });
+  // Légende couleurs
+  const legY = y+39.5; let legX = ML+8;
+  DPE_LABELS.forEach(k => {
+    doc.setFillColor(...DPE_RGB[k]); doc.circle(legX, legY, 1.8, 'F');
+    doc.setTextColor(60,80,100); doc.setFontSize(6.5);
+    doc.text(k, legX+3, legY+1); legX += 22;
+  });
+  y += 47;
+
+  // — Répartition DPE —
+  y = secTitle('REPARTITION PAR ETIQUETTE DPE', y);
+  const maxDpe = Math.max(...Object.values(dpeCounts), 1);
+  const barW = CW - 38;
+  DPE_LABELS.forEach(k => {
+    const cnt = dpeCounts[k], pct = n ? (cnt/n*100).toFixed(1) : '0.0';
+    const fill = Math.max(1, Math.round(cnt/maxDpe*barW));
+    doc.setFillColor(...DPE_RGB[k]); doc.circle(ML+3, y+3, 2.8, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(6); doc.setFont('helvetica','bold');
+    doc.text(k, ML+3, y+4.2, { align:'center' });
+    doc.setTextColor(50,70,90); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+    doc.text('('+pct+'%)', ML+9, y+4);
+    doc.setFillColor(228,240,250); doc.roundedRect(ML+28, y+0.5, barW, 5.5, 1, 1, 'F');
+    if(cnt>0){ doc.setFillColor(...DPE_RGB[k]); doc.roundedRect(ML+28, y+0.5, fill, 5.5, 1, 1, 'F'); }
+    doc.setTextColor(100,130,155); doc.setFontSize(7);
+    doc.text(cnt.toLocaleString('fr-FR'), ML+28+barW+2, y+4.5);
+    y += 7.5;
+  });
+
+  drawFooter(1);
+
+  // ══════════════ PAGE 2 ══════════════
+  doc.addPage(); drawHeader(); y = MT + 3;
+
+  // — Répartition GES —
+  y = secTitle('REPARTITION PAR ETIQUETTE GES', y);
+  const maxGes = Math.max(...Object.values(gesCounts), 1);
+  DPE_LABELS.forEach(k => {
+    const cnt = gesCounts[k], pct = n ? (cnt/n*100).toFixed(1) : '0.0';
+    const fill = Math.max(1, Math.round(cnt/maxGes*barW));
+    doc.setFillColor(...DPE_RGB[k]); doc.circle(ML+3, y+3, 2.8, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(6); doc.setFont('helvetica','bold');
+    doc.text(k, ML+3, y+4.2, { align:'center' });
+    doc.setTextColor(50,70,90); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+    doc.text('('+pct+'%)', ML+9, y+4);
+    doc.setFillColor(228,240,250); doc.roundedRect(ML+28, y+0.5, barW, 5.5, 1, 1, 'F');
+    if(cnt>0){ doc.setFillColor(...DPE_RGB[k]); doc.roundedRect(ML+28, y+0.5, fill, 5.5, 1, 1, 'F'); }
+    doc.setTextColor(100,130,155); doc.setFontSize(7);
+    doc.text(cnt.toLocaleString('fr-FR'), ML+28+barW+2, y+4.5);
+    y += 7.5;
+  });
+  y += 5;
+
+  // — 2 colonnes : Énergie + Période —
+  const colW = (CW-6)/2;
+  let y1 = y, y2 = y;
+
+  // Col gauche : Énergie
+  doc.setFillColor(...C_ACC); doc.rect(ML, y1, 3, 6, 'F');
+  doc.setTextColor(...C_BG); doc.setFontSize(8); doc.setFont('helvetica','bold');
+  doc.text('ENERGIE PRINCIPALE DE CHAUFFAGE', ML+5, y1+4.5);
+  doc.setDrawColor(200,225,240); doc.setLineWidth(0.2); doc.line(ML+5, y1+6.5, ML+colW, y1+6.5);
+  y1 += 10;
+  const hMax = heatSorted.length ? heatSorted[0][1] : 1;
+  heatSorted.forEach(([name,cnt]) => { y1 = barRow(name, cnt, n, hMax, ML, y1, colW, [0,119,168]); });
+
+  // Col droite : Période
+  const cx2 = ML + colW + 6;
+  doc.setFillColor(...C_ACC); doc.rect(cx2, y2, 3, 6, 'F');
+  doc.setTextColor(...C_BG); doc.setFontSize(8); doc.setFont('helvetica','bold');
+  doc.text('PERIODE DE CONSTRUCTION', cx2+5, y2+4.5);
+  doc.setDrawColor(200,225,240); doc.setLineWidth(0.2); doc.line(cx2+5, y2+6.5, cx2+colW, y2+6.5);
+  y2 += 10;
+  const perFiltered = PERIODE_ORDER.filter(p=>perCounts[p]);
+  const perMax = perFiltered.length ? Math.max(...perFiltered.map(p=>perCounts[p])) : 1;
+  perFiltered.forEach(p => { y2 = barRow(p, perCounts[p], n, perMax, cx2, y2, colW, [0,77,108]); });
+  y = Math.max(y1,y2) + 8;
+
+  // — Tableau croisé —
+  y = secTitle('SYNTHESE DPE PAR TYPE DE BATIMENT', y);
+  doc.setFontSize(7); doc.setFont('helvetica','italic'); doc.setTextColor(90,115,135);
+  doc.text('Distribution des logements filtres par classe DPE et type de batiment. Donnees extraites de la base ADEME DPE logements existants.', ML, y, { maxWidth: CW });
+  y += 5;
+
+  const totAppt  = FILT.filter(d=>d.type==='appartement').length;
+  const totMais  = FILT.filter(d=>d.type==='maison').length;
+  const totImm   = FILT.filter(d=>d.type==='immeuble').length;
+  const tableBody = DPE_LABELS.map(k => {
+    const r = crossData[k];
+    return [k, r.appartement.toLocaleString('fr-FR'), r.maison.toLocaleString('fr-FR'), r.immeuble.toLocaleString('fr-FR'), r.total.toLocaleString('fr-FR'), n ? (r.total/n*100).toFixed(1)+'%' : '0%'];
+  });
+  tableBody.push(['Total', totAppt.toLocaleString('fr-FR'), totMais.toLocaleString('fr-FR'), totImm.toLocaleString('fr-FR'), n.toLocaleString('fr-FR'), '100 %']);
+
+  doc.autoTable({
+    startY: y, margin: { left: ML, right: MR },
+    head: [['Classe DPE','Appartements','Maisons','Immeubles','Total','% du total']],
+    body: tableBody,
+    styles: { fontSize:7.5, cellPadding:2.5, halign:'center' },
+    headStyles: { fillColor:C_BG, textColor:255, fontStyle:'bold', fontSize:7.5 },
+    alternateRowStyles: { fillColor:[246,251,255] },
+    tableLineColor:[200,220,235], tableLineWidth:0.2,
+    didDrawCell: data => {
+      if(data.section==='body' && data.column.index===0 && data.row.index<7) {
+        const k = DPE_LABELS[data.row.index];
+        doc.setFillColor(...DPE_RGB[k]);
+        doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
+        doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont('helvetica','bold');
+        doc.text(k, data.cell.x+data.cell.width/2, data.cell.y+data.cell.height/2+1.5, { align:'center' });
+      }
+      if(data.section==='body' && data.row.index===7) {
+        doc.setFillColor(225,240,250);
+        doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
+        doc.setTextColor(13,27,42); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+        doc.text(String(data.cell.raw), data.cell.x+data.cell.width/2, data.cell.y+data.cell.height/2+1.5, { align:'center' });
+      }
+    },
+  });
+
+  drawFooter(2);
+
+  // ══════════════ PAGE 3 ══════════════
+  doc.addPage(); drawHeader(); y = MT + 3;
+
+  y = secTitle('SOURCES ET MENTIONS LEGALES', y);
+  doc.setFillColor(240,248,253); doc.setDrawColor(185,215,235); doc.setLineWidth(0.2);
+  doc.roundedRect(ML, y, CW, 48, 2, 2, 'FD');
+  doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(50,75,100);
+  const legalText = 'Donnees issues de la base ADEME « DPE Logements existants » (dataset dpe03existant), disponible sur data.ademe.fr sous licence Etalab 2.0. Les diagnostics de performance energetique (DPE) ont ete realises par des diagnostiqueurs certifies conformement a la reglementation francaise. Ce rapport a ete genere automatiquement par l\'application EnerMap a partir des donnees disponibles au ' + dateStr + '. Les valeurs affichees correspondent aux logements correspondant aux filtres selectionnes et ne constituent pas une analyse exhaustive.';
+  const lines = doc.splitTextToSize(legalText, CW-10);
+  doc.text(lines, ML+5, y+8);
+
+  y += 56;
+  // Recap filtres en boîte
+  y = secTitle('RAPPEL DES PARAMETRES DE GENERATION', y);
+  doc.autoTable({
+    startY: y, margin: { left: ML, right: MR },
+    head: [['Parametre','Valeur']],
+    body: [
+      ...filterRows,
+      ['Ville', CITY.label],
+      ['Logements filtres / total', n.toLocaleString('fr-FR') + ' / ' + ALL.length.toLocaleString('fr-FR')],
+      ['Date de generation', dateStr + ' a ' + timeStr],
+    ],
+    styles: { fontSize:7.5, cellPadding:2.5 },
+    headStyles: { fillColor:C_BG, textColor:255, fontStyle:'bold' },
+    columnStyles: { 0:{ fontStyle:'bold', fillColor:[238,245,252], textColor:[13,27,42], cellWidth:52 }, 1:{ textColor:[50,70,90] } },
+    alternateRowStyles: { fillColor:[246,251,255] },
+    theme: 'grid', tableLineColor:[200,220,235], tableLineWidth:0.2,
+  });
+
+  drawFooter(3);
+
+  // ── Sauvegarde ──
+  const filename = 'EnerMap_Rapport_' + CITY.label + '_' + dateStr.replace(/\//g,'-') + '.pdf';
+  doc.save(filename);
 }
 
 // ─────────────────────────────────────────────────────────────

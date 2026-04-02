@@ -1,1571 +1,1692 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EnerMap — Dashboard Grenoble</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-    <style>
-        :root {
-            --bg: #0D1B2A;
-            --card: #152236;
-            --border: #1E3A5F;
-            --accent: #00B4D8;
-            --accdark: #0077A8;
-            --txt: #E8F4FD;
-            --txt2: #8BACC8;
-            --dpe-a: #1B7340;
-            --dpe-b: #27AE60;
-            --dpe-c: #82C341;
-            --dpe-d: #F3C010;
-            --dpe-e: #E67E22;
-            --dpe-f: #E74C3C;
-            --dpe-g: #8E1010;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0
-        }
-
-        body {
-            font-family: 'Inter', 'Segoe UI', sans-serif;
-            background: var(--bg);
-            color: var(--txt);
-            height: 100dvh;
-            width: 100dvw;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column
-        }
-
-        .splash {
-            position: fixed;
-            inset: 0;
-            background: var(--bg);
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
-            transition: opacity .5s
-        }
-
-        .splash.gone {
-            opacity: 0;
-            pointer-events: none
-        }
-
-        .splash-logo {
-            font-size: 32px;
-            font-weight: 800;
-            letter-spacing: -.02em
-        }
-
-        .splash-logo span {
-            color: var(--accent)
-        }
-
-        .splash-sub {
-            color: var(--txt2);
-            font-size: 14px
-        }
-
-        .splash-spin {
-            width: 36px;
-            height: 36px;
-            border: 3px solid var(--border);
-            border-top-color: var(--accent);
-            border-radius: 50%;
-            animation: spin .8s linear infinite
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg)
-            }
-        }
-
-        .prog-wrap {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 5000;
-            background: rgba(13, 27, 42, .85);
-            backdrop-filter: blur(4px);
-            padding: 6px 18px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            border-top: 1px solid var(--border);
-            transition: opacity .4s
-        }
-
-        .prog-wrap.hidden {
-            opacity: 0;
-            pointer-events: none
-        }
-
-        .prog-bar-bg {
-            flex: 1;
-            height: 4px;
-            background: var(--border);
-            border-radius: 2px;
-            overflow: hidden
-        }
-
-        .prog-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accdark), var(--accent));
-            border-radius: 2px;
-            transition: width .3s
-        }
-
-        .prog-label {
-            font-size: 10px;
-            color: var(--txt2);
-            white-space: nowrap;
-            min-width: 200px
-        }
-
-        header {
-            height: 56px;
-            background: #0A1520;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 0 18px;
-            flex-shrink: 0;
-            z-index: 1000;
-            min-width: 0;
-            overflow: hidden
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-shrink: 0
-        }
-
-        .logo-icon {
-            width: 30px;
-            height: 30px;
-            background: linear-gradient(135deg, var(--accdark), var(--accent));
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 15px
-        }
-
-        .logo-text {
-            font-size: 17px;
-            font-weight: 700
-        }
-
-        .logo-text span {
-            color: var(--accent)
-        }
-
-        .logo-sub {
-            font-size: 9px;
-            color: var(--txt2);
-            letter-spacing: .04em
-        }
-
-        .hdiv {
-            width: 1px;
-            height: 32px;
-            background: var(--border);
-            flex-shrink: 0
-        }
-
-        .search-wrap {
-            position: relative;
-            flex: 1;
-            min-width: 0;
-            max-width: 320px
-        }
-
-        .search {
-            display: flex;
-            align-items: center;
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 0 10px;
-            height: 34px;
-            gap: 8px;
-            width: 100%
-        }
-
-        .search input {
-            background: none;
-            border: none;
-            color: var(--txt);
-            font-size: 13px;
-            outline: none;
-            width: 100%
-        }
-
-        .suggestions {
-            position: absolute;
-            top: calc(100% + 4px);
-            left: 0;
-            right: 0;
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            z-index: 2000;
-            overflow: hidden;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, .5);
-            display: none
-        }
-
-        .suggestions.open {
-            display: block
-        }
-
-        .sugg-item {
-            padding: 8px 12px;
-            font-size: 11px;
-            cursor: pointer;
-            color: var(--txt2);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            border-bottom: 1px solid rgba(30, 58, 95, .5)
-        }
-
-        .sugg-item:last-child {
-            border-bottom: none
-        }
-
-        .sugg-item:hover {
-            background: rgba(255, 255, 255, .05);
-            color: var(--txt)
-        }
-
-        .badge {
-            background: rgba(0, 180, 216, .12);
-            border: 1px solid rgba(0, 180, 216, .3);
-            border-radius: 6px;
-            padding: 3px 9px;
-            font-size: 10px;
-            color: var(--accent);
-            font-weight: 600;
-            letter-spacing: .04em
-        }
-
-        .city-selector {
-            display: flex;
-            align-items: center;
-            gap: 0;
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            overflow: hidden;
-            flex-shrink: 0
-        }
-
-        .city-btn {
-            padding: 5px 13px;
-            font-size: 11px;
-            font-weight: 600;
-            cursor: pointer;
-            border: none;
-            background: transparent;
-            color: var(--txt2);
-            transition: all .15s;
-            position: relative;
-            white-space: nowrap
-        }
-
-        .city-btn:hover {
-            color: var(--txt);
-            background: rgba(255, 255, 255, .04)
-        }
-
-        .city-btn.active {
-            background: var(--accdark);
-            color: #fff
-        }
-
-        .city-btn:not(:last-child)::after {
-            content: '';
-            position: absolute;
-            right: 0;
-            top: 20%;
-            height: 60%;
-            width: 1px;
-            background: var(--border)
-        }
-
-        .city-btn.active::after {
-            display: none
-        }
-
-        .city-loading {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border: 1.5px solid rgba(255, 255, 255, .3);
-            border-top-color: #fff;
-            border-radius: 50%;
-            animation: spin .6s linear infinite;
-            margin-left: 5px;
-            vertical-align: middle;
-            display: none
-        }
-
-        .city-btn.loading .city-loading {
-            display: inline-block
-        }
-
-        .hbtns {
-            margin-left: auto;
-            display: flex;
-            gap: 8px
-        }
-
-        .btn {
-            padding: 6px 12px;
-            border-radius: 7px;
-            font-size: 11px;
-            font-weight: 600;
-            cursor: pointer;
-            border: none;
-            transition: all .15s
-        }
-
-        .btn-o {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--txt2)
-        }
-
-        .btn-o:hover {
-            border-color: var(--accent);
-            color: var(--accent)
-        }
-
-        .btn-p {
-            background: var(--accdark);
-            color: #fff
-        }
-
-        .btn-p:hover {
-            background: var(--accent)
-        }
-
-        .main {
-            display: grid;
-            grid-template-columns: 220px 1fr 240px;
-            flex: 1;
-            min-height: 0;
-            min-width: 0
-        }
-
-        .sidebar {
-            background: var(--card);
-            border-right: 1px solid var(--border);
-            padding: 12px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 10px
-        }
-
-        .flabel {
-            font-size: 9px;
-            font-weight: 700;
-            color: var(--accent);
-            letter-spacing: .1em;
-            text-transform: uppercase;
-            margin-bottom: 8px
-        }
-
-        .dpe-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 5px
-        }
-
-        .chip {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            padding: 4px 7px;
-            border-radius: 6px;
-            cursor: pointer;
-            border: 1px solid transparent;
-            transition: all .15s;
-            user-select: none
-        }
-
-        .chip:hover {
-            border-color: rgba(255, 255, 255, .15)
-        }
-
-        .chip.on {
-            border-color: rgba(255, 255, 255, .22);
-            background: rgba(255, 255, 255, .05)
-        }
-
-        .chip-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            flex-shrink: 0
-        }
-
-        .chip-lbl {
-            font-size: 11px;
-            font-weight: 600
-        }
-
-        .chip-cnt {
-            font-size: 9px;
-            color: var(--txt2);
-            margin-left: auto
-        }
-
-        .fcard {
-            background: rgba(255, 255, 255, .03);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 12px
-        }
-
-        .range-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 8px
-        }
-
-        .range-row input[type=range] {
-            flex: 1;
-            accent-color: var(--accent)
-        }
-
-        .range-val {
-            font-size: 10px;
-            color: var(--txt2);
-            min-width: 36px;
-            text-align: right
-        }
-
-        select.sel {
-            width: 100%;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            color: var(--txt);
-            border-radius: 6px;
-            padding: 5px 8px;
-            font-size: 11px;
-            cursor: pointer;
-            margin-top: 8px
-        }
-
-        .center-col {
-            display: flex;
-            flex-direction: column;
-            min-height: 0;
-            overflow: hidden
-        }
-
-        #map {
-            width: 100%;
-            height: 100%
-        }
-
-        .map-wrap {
-            position: relative;
-            flex: 1;
-            min-height: 0;
-            overflow: hidden
-        }
-
-        .map-badge {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            z-index: 800;
-            background: rgba(13, 27, 42, .82);
-            backdrop-filter: blur(4px);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 5px 10px;
-            font-size: 10px;
-            color: var(--txt2)
-        }
-
-        .map-badge strong {
-            color: var(--txt)
-        }
-
-        .map-controls {
-            position: absolute;
-            bottom: 14px;
-            left: 10px;
-            z-index: 800;
-            display: flex;
-            flex-direction: column;
-            gap: 4px
-        }
-
-        .map-ctrl-btn {
-            width: 30px;
-            height: 30px;
-            background: rgba(13, 27, 42, .88);
-            backdrop-filter: blur(4px);
-            border: 1px solid var(--border);
-            border-radius: 7px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            color: var(--txt);
-            font-size: 14px;
-            font-weight: 700;
-            transition: all .15s;
-            user-select: none;
-            line-height: 1
-        }
-
-        .map-ctrl-btn:hover {
-            background: var(--accdark);
-            border-color: var(--accent);
-            color: #fff
-        }
-
-        .map-ctrl-sep {
-            height: 1px;
-            background: var(--border);
-            margin: 2px 0
-        }
-
-        .map-wrap.fullscreen {
-            position: fixed;
-            inset: 0;
-            z-index: 8000;
-            width: 100vw;
-            height: 100vh
-        }
-
-        .map-wrap.fullscreen #map {
-            width: 100%;
-            height: 100%
-        }
-
-        .map-wrap.fullscreen .map-controls {
-            bottom: 20px;
-            left: 14px
-        }
-
-        .map-wrap.fullscreen .map-badge {
-            top: 14px;
-            right: 14px
-        }
-
-        .map-wrap.fullscreen .basemap-panel {
-            bottom: 20px;
-            left: 50px
-        }
-
-        .basemap-panel {
-            position: absolute;
-            bottom: 14px;
-            left: 50px;
-            z-index: 800;
-            background: rgba(13, 27, 42, .95);
-            backdrop-filter: blur(8px);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 10px 10px 8px;
-            display: none;
-            flex-wrap: wrap;
-            gap: 7px;
-            width: 222px;
-            box-shadow: 0 8px 28px rgba(0, 0, 0, .55)
-        }
-
-        .basemap-panel.open {
-            display: flex
-        }
-
-        .basemap-panel-title {
-            width: 100%;
-            font-size: 9px;
-            font-weight: 700;
-            color: var(--accent);
-            letter-spacing: .1em;
-            text-transform: uppercase;
-            margin-bottom: 2px
-        }
-
-        .bmap-thumb {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            cursor: pointer;
-            border-radius: 7px;
-            padding: 4px;
-            border: 2px solid transparent;
-            transition: border-color .15s, background .15s;
-            width: calc(33.33% - 5px)
-        }
-
-        .bmap-thumb:hover {
-            border-color: rgba(255, 255, 255, .25);
-            background: rgba(255, 255, 255, .04)
-        }
-
-        .bmap-thumb.active {
-            border-color: var(--accent)
-        }
-
-        .bmap-thumb.active .bmap-name {
-            color: var(--accent);
-            font-weight: 700
-        }
-
-        .bmap-img {
-            width: 100%;
-            aspect-ratio: 1;
-            border-radius: 4px;
-            object-fit: cover;
-            background: var(--border);
-            display: block
-        }
-
-        .bmap-name {
-            font-size: 8px;
-            color: var(--txt2);
-            text-align: center;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            width: 100%;
-            padding: 0 2px
-        }
-
-        .map-ctrl-btn.active {
-            background: var(--accdark);
-            border-color: var(--accent);
-            color: #fff
-        }
-
-        .bottom-strip {
-            flex-shrink: 0;
-            height: 148px;
-            background: #0A1520;
-            border-top: 1px solid var(--border);
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1.3fr) 1px minmax(0, 1fr) 1px minmax(0, 1fr);
-            overflow: hidden
-        }
-
-        .bstrip-div {
-            background: var(--border)
-        }
-
-        .bstrip-panel {
-            padding: 10px 14px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            overflow: hidden;
-            min-width: 0
-        }
-
-        .bstrip-title {
-            font-size: 9px;
-            font-weight: 700;
-            color: var(--accent);
-            letter-spacing: .1em;
-            text-transform: uppercase;
-            flex-shrink: 0
-        }
-
-        .per-list {
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-            flex: 1;
-            justify-content: center
-        }
-
-        .per-row {
-            display: flex;
-            align-items: center;
-            gap: 5px
-        }
-
-        .per-lbl {
-            font-size: 8px;
-            color: var(--txt2);
-            width: 58px;
-            flex-shrink: 0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis
-        }
-
-        .per-bar-bg {
-            flex: 1;
-            height: 7px;
-            background: rgba(255, 255, 255, .06);
-            border-radius: 2px;
-            overflow: hidden
-        }
-
-        .per-bar-fill {
-            height: 100%;
-            background: var(--accdark);
-            border-radius: 2px;
-            transition: width .4s;
-            opacity: .85
-        }
-
-        .per-cnt {
-            font-size: 8px;
-            color: var(--txt2);
-            min-width: 30px;
-            text-align: right
-        }
-
-        .type-pills {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            flex: 1;
-            justify-content: center
-        }
-
-        .type-pill {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            background: rgba(255, 255, 255, .03);
-            border: 1px solid var(--border);
-            border-radius: 7px;
-            padding: 5px 8px
-        }
-
-        .type-icon {
-            font-size: 13px;
-            flex-shrink: 0
-        }
-
-        .type-info {
-            flex: 1;
-            min-width: 0
-        }
-
-        .type-name {
-            font-size: 9px;
-            color: var(--txt);
-            font-weight: 600
-        }
-
-        .type-sub {
-            font-size: 8px;
-            color: var(--txt2)
-        }
-
-        .type-pct {
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--accent)
-        }
-
-        .co2-bars {
-            display: flex;
-            align-items: flex-end;
-            gap: 2px;
-            flex: 1;
-            padding-top: 4px;
-            overflow: hidden
-        }
-
-        .co2-col {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 2px;
-            flex: 1;
-            min-width: 0
-        }
-
-        .co2-bar {
-            width: 100%;
-            border-radius: 2px 2px 0 0;
-            transition: height .4s;
-            min-height: 2px
-        }
-
-        .co2-lbl {
-            font-size: 7px;
-            color: var(--txt2);
-            text-align: center;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: clip;
-            width: 100%
-        }
-
-        .score-ring-wrap {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex: 1
-        }
-
-        .score-ring {
-            position: relative;
-            width: 64px;
-            height: 64px;
-            flex-shrink: 0
-        }
-
-        .score-ring svg {
-            transform: rotate(-90deg)
-        }
-
-        .score-ring-val {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            font-weight: 800;
-            color: var(--txt)
-        }
-
-        .score-legend {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            flex: 1
-        }
-
-        .score-leg-row {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 8px;
-            color: var(--txt2)
-        }
-
-        .score-leg-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            flex-shrink: 0
-        }
-
-        .rpanel {
-            background: var(--card);
-            border-left: 1px solid var(--border);
-            padding: 14px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 14px
-        }
-
-        .kpi-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px
-        }
-
-        .kpi {
-            background: rgba(255, 255, 255, .03);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 10px
-        }
-
-        .kpi-val {
-            font-size: 22px;
-            font-weight: 800;
-            color: var(--accent);
-            line-height: 1
-        }
-
-        .kpi-lbl {
-            font-size: 9px;
-            color: var(--txt2);
-            margin-top: 4px;
-            font-weight: 500
-        }
-
-        .kpi-wide {
-            grid-column: span 2
-        }
-
-        .chart-wrap {
-            background: rgba(255, 255, 255, .03);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 12px
-        }
-
-        .chart-title {
-            font-size: 10px;
-            font-weight: 700;
-            color: var(--accent);
-            letter-spacing: .08em;
-            text-transform: uppercase;
-            margin-bottom: 10px
-        }
-
-        .bar-chart {
-            display: flex;
-            flex-direction: column;
-            gap: 5px
-        }
-
-        .bar-row {
-            display: flex;
-            align-items: center;
-            gap: 7px
-        }
-
-        .bar-key {
-            font-size: 9px;
-            width: 12px;
-            font-weight: 700;
-            text-align: center
-        }
-
-        .bar-bg {
-            flex: 1;
-            height: 12px;
-            background: rgba(255, 255, 255, .06);
-            border-radius: 3px;
-            overflow: hidden
-        }
-
-        .bar-fill {
-            height: 100%;
-            border-radius: 3px;
-            transition: width .4s
-        }
-
-        .bar-cnt {
-            font-size: 9px;
-            color: var(--txt2);
-            min-width: 32px;
-            text-align: right
-        }
-
-        .donut-wrap {
-            display: flex;
-            gap: 12px;
-            align-items: center
-        }
-
-        .donut-canvas {
-            flex-shrink: 0
-        }
-
-        .donut-legend {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            flex: 1
-        }
-
-        .leg-row {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 9px
-        }
-
-        .leg-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            flex-shrink: 0
-        }
-
-        .heat-list {
-            display: flex;
-            flex-direction: column;
-            gap: 4px
-        }
-
-        .heat-item {
-            display: flex;
-            align-items: center;
-            gap: 6px
-        }
-
-        .heat-name {
-            font-size: 9px;
-            color: var(--txt2);
-            flex: 1;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis
-        }
-
-        .heat-bar-bg {
-            width: 80px;
-            height: 8px;
-            background: rgba(255, 255, 255, .06);
-            border-radius: 3px;
-            overflow: hidden;
-            flex-shrink: 0
-        }
-
-        .heat-bar-fill {
-            height: 100%;
-            background: var(--accent);
-            border-radius: 3px;
-            transition: width .4s;
-            opacity: .75
-        }
-
-        .heat-pct {
-            font-size: 9px;
-            color: var(--txt2);
-            min-width: 28px;
-            text-align: right
-        }
-
-        .leaflet-popup-content-wrapper {
-            background: var(--card) !important;
-            color: var(--txt) !important;
-            border: 1px solid var(--border) !important;
-            border-radius: 10px !important;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, .5) !important
-        }
-
-        .leaflet-popup-tip {
-            background: var(--card) !important
-        }
-
-        .pop-dpe {
-            display: inline-block;
-            padding: 2px 7px;
-            border-radius: 5px;
-            font-weight: 700;
-            font-size: 12px;
-            margin-bottom: 6px
-        }
-
-        .pop-row {
-            font-size: 11px;
-            color: var(--txt2);
-            margin-bottom: 2px
-        }
-
-        .pop-row strong {
-            color: var(--txt)
-        }
-
-        .marker-cluster-small,
-        .marker-cluster-medium,
-        .marker-cluster-large {
-            background: rgba(0, 119, 168, .35) !important
-        }
-
-        .marker-cluster-small div,
-        .marker-cluster-medium div,
-        .marker-cluster-large div {
-            background: rgba(0, 180, 216, .7) !important;
-            color: #fff !important;
-            font-weight: 700
-        }
-
-        .toggle-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between
-        }
-
-        .toggle {
-            position: relative;
-            width: 34px;
-            height: 18px;
-            flex-shrink: 0
-        }
-
-        .toggle input {
-            opacity: 0;
-            width: 0;
-            height: 0
-        }
-
-        .toggle-track {
-            position: absolute;
-            inset: 0;
-            background: var(--border);
-            border-radius: 9px;
-            cursor: pointer;
-            transition: background .2s
-        }
-
-        .toggle input:checked+.toggle-track {
-            background: var(--accdark)
-        }
-
-        .toggle-track::after {
-            content: '';
-            position: absolute;
-            width: 12px;
-            height: 12px;
-            left: 3px;
-            top: 3px;
-            background: #fff;
-            border-radius: 50%;
-            transition: transform .2s
-        }
-
-        .toggle input:checked+.toggle-track::after {
-            transform: translateX(16px)
-        }
-
-        ::-webkit-scrollbar {
-            width: 4px
-        }
-
-        ::-webkit-scrollbar-track {
-            background: transparent
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--border);
-            border-radius: 2px
-        }
-
-        @media (max-width:1180px) {
-            header {
-                gap: 10px;
-                padding: 0 12px
-            }
-
-            .logo-sub {
-                display: none
-            }
-
-            .hdiv {
-                display: none
-            }
-
-            .search-wrap {
-                max-width: 200px
-            }
-
-            .btn {
-                padding: 5px 9px;
-                font-size: 10px
-            }
-
-            .city-btn {
-                padding: 5px 9px;
-                font-size: 10px
-            }
-
-            .main {
-                grid-template-columns: 188px 1fr 200px
-            }
-
-            .sidebar {
-                padding: 10px;
-                gap: 8px
-            }
-
-            .rpanel {
-                padding: 10px;
-                gap: 10px
-            }
-
-            .fcard {
-                padding: 9px
-            }
-
-            .kpi-val {
-                font-size: 18px
-            }
-
-            .bottom-strip {
-                height: 130px
-            }
-
-            .bstrip-panel {
-                padding: 8px 10px
-            }
-
-            .bstrip-title {
-                font-size: 8px
-            }
-
-            .per-lbl {
-                width: 48px;
-                font-size: 7px
-            }
-
-            .score-ring {
-                width: 52px;
-                height: 52px
-            }
-
-            .score-ring svg {
-                width: 52px;
-                height: 52px
-            }
-        }
-
-        @media (max-width:900px) {
-            header {
-                height: 48px;
-                gap: 8px;
-                padding: 0 10px
-            }
-
-            .logo-text {
-                font-size: 14px
-            }
-
-            .logo-icon {
-                width: 26px;
-                height: 26px;
-                font-size: 13px
-            }
-
-            .search-wrap {
-                max-width: 160px
-            }
-
-            .main {
-                grid-template-columns: 164px 1fr 180px
-            }
-
-            .kpi-grid {
-                gap: 5px
-            }
-
-            .kpi {
-                padding: 7px
-            }
-
-            .kpi-val {
-                font-size: 16px
-            }
-
-            .kpi-lbl {
-                font-size: 8px
-            }
-
-            .chart-wrap {
-                padding: 9px
-            }
-
-            .chart-title {
-                font-size: 9px;
-                margin-bottom: 7px
-            }
-
-            .bottom-strip {
-                height: 120px;
-                grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1.2fr) 1px minmax(0, 1fr) 1px minmax(0, 1fr)
-            }
-
-            .bstrip-panel {
-                padding: 6px 8px;
-                gap: 4px
-            }
-
-            .type-pill {
-                padding: 4px 6px
-            }
-
-            .type-icon {
-                font-size: 11px
-            }
-
-            .per-lbl {
-                width: 40px
-            }
-
-            .score-ring {
-                width: 44px;
-                height: 44px
-            }
-
-            .score-ring svg {
-                width: 44px;
-                height: 44px
-            }
-
-            .score-ring-val {
-                font-size: 13px
-            }
-
-            .score-leg-row {
-                font-size: 7px
-            }
-
-            .heat-bar-bg {
-                width: 56px
-            }
-
-            .hbtns .btn-o {
-                display: none
-            }
-        }
-
-        @media (max-width:768px) {
-            header {
-                height: 44px;
-                padding: 0 8px;
-                gap: 6px
-            }
-
-            .logo-text {
-                font-size: 13px
-            }
-
-            .search-wrap {
-                display: none
-            }
-
-            .city-btn {
-                padding: 4px 8px;
-                font-size: 9px
-            }
-
-            .main {
-                grid-template-columns: 0 1fr 0;
-                position: relative
-            }
-
-            .sidebar {
-                display: none
-            }
-
-            .rpanel {
-                display: none
-            }
-
-            .bottom-strip {
-                height: 110px;
-                grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1.2fr) 1px minmax(0, 1fr)
-            }
-
-            .bottom-strip>.bstrip-panel:last-child,
-            .bottom-strip>.bstrip-div:nth-child(6) {
-                display: none
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EnerMap — Dashboard Grenoble</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+
+<style>
+  :root {
+    --bg:      #0D1B2A;
+    --card:    #152236;
+    --border:  #1E3A5F;
+    --accent:  #00B4D8;
+    --accdark: #0077A8;
+    --txt:     #E8F4FD;
+    --txt2:    #8BACC8;
+    --dpe-a:#1B7340;--dpe-b:#27AE60;--dpe-c:#82C341;
+    --dpe-d:#F3C010;--dpe-e:#E67E22;--dpe-f:#E74C3C;--dpe-g:#8E1010;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--txt);height:100dvh;width:100dvw;overflow:hidden;display:flex;flex-direction:column}
+
+  /* SPLASH */
+  .splash{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;transition:opacity .5s}
+  .splash.gone{opacity:0;pointer-events:none}
+  .splash-logo{font-size:32px;font-weight:800;letter-spacing:-.02em}
+  .splash-logo span{color:var(--accent)}
+  .splash-sub{color:var(--txt2);font-size:14px}
+  .splash-spin{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* PROGRESS BAR (bottom strip, non-blocking) */
+  .prog-wrap{position:fixed;bottom:0;left:0;right:0;z-index:5000;background:rgba(13,27,42,.85);backdrop-filter:blur(4px);padding:6px 18px;display:flex;align-items:center;gap:12px;border-top:1px solid var(--border);transition:opacity .4s}
+  .prog-wrap.hidden{opacity:0;pointer-events:none}
+  .prog-bar-bg{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+  .prog-bar-fill{height:100%;background:linear-gradient(90deg,var(--accdark),var(--accent));border-radius:2px;transition:width .3s}
+  .prog-label{font-size:10px;color:var(--txt2);white-space:nowrap;min-width:200px}
+
+  /* HEADER */
+  header{height:56px;background:#0A1520;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;padding:0 18px;flex-shrink:0;z-index:1000;min-width:0;overflow:hidden}
+  .logo{display:flex;align-items:center;gap:8px;flex-shrink:0}
+  .logo-icon{width:30px;height:30px;background:linear-gradient(135deg,var(--accdark),var(--accent));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
+  .logo-text{font-size:17px;font-weight:700}.logo-text span{color:var(--accent)}
+  .logo-sub{font-size:9px;color:var(--txt2);letter-spacing:.04em}
+  .hdiv{width:1px;height:32px;background:var(--border);flex-shrink:0}
+  .search-wrap{position:relative;flex:1;min-width:0;max-width:320px}
+  .search{display:flex;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:0 10px;height:34px;gap:8px;width:100%}
+  .search input{background:none;border:none;color:var(--txt);font-size:13px;outline:none;width:100%}
+  .suggestions{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:8px;z-index:2000;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.5);display:none}
+  .suggestions.open{display:block}
+  .sugg-item{padding:8px 12px;font-size:11px;cursor:pointer;color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid rgba(30,58,95,.5)}
+  .sugg-item:last-child{border-bottom:none}
+  .sugg-item:hover{background:rgba(255,255,255,.05);color:var(--txt)}
+  .badge{background:rgba(0,180,216,.12);border:1px solid rgba(0,180,216,.3);border-radius:6px;padding:3px 9px;font-size:10px;color:var(--accent);font-weight:600;letter-spacing:.04em}
+
+  /* CITY SELECTOR */
+  .city-selector{display:flex;align-items:center;gap:0;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;flex-shrink:0}
+  .city-btn{padding:5px 13px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--txt2);transition:all .15s;position:relative;white-space:nowrap}
+  .city-btn:hover{color:var(--txt);background:rgba(255,255,255,.04)}
+  .city-btn.active{background:var(--accdark);color:#fff}
+  .city-btn:not(:last-child)::after{content:'';position:absolute;right:0;top:20%;height:60%;width:1px;background:var(--border)}
+  .city-btn.active::after{display:none}
+  .city-loading{display:inline-block;width:8px;height:8px;border:1.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;margin-left:5px;vertical-align:middle;display:none}
+  .city-btn.loading .city-loading{display:inline-block}
+  .hbtns{margin-left:auto;display:flex;gap:8px}
+  .btn{padding:6px 12px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+  .btn-o{background:transparent;border:1px solid var(--border);color:var(--txt2)}.btn-o:hover{border-color:var(--accent);color:var(--accent)}
+  .btn-p{background:var(--accdark);color:#fff}.btn-p:hover{background:var(--accent)}
+
+  /* MAIN 3-COL */
+  .main{display:grid;grid-template-columns:220px 1fr 240px;flex:1;min-height:0;min-width:0}
+
+  /* SIDEBAR */
+  .sidebar{background:var(--card);border-right:1px solid var(--border);padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+  .flabel{font-size:9px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+  .dpe-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+  .chip{display:flex;align-items:center;gap:5px;padding:4px 7px;border-radius:6px;cursor:pointer;border:1px solid transparent;transition:all .15s;user-select:none}
+  .chip:hover{border-color:rgba(255,255,255,.15)}.chip.on{border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.05)}
+  .chip-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+  .chip-lbl{font-size:11px;font-weight:600}.chip-cnt{font-size:9px;color:var(--txt2);margin-left:auto}
+
+  .fcard{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:12px}
+  .range-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+  .range-row input[type=range]{flex:1;accent-color:var(--accent)}
+  .range-val{font-size:10px;color:var(--txt2);min-width:36px;text-align:right}
+  select.sel{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--txt);border-radius:6px;padding:5px 8px;font-size:11px;cursor:pointer;margin-top:8px}
+
+  /* CENTER COLUMN */
+  .center-col{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+
+  /* MAP */
+  #map{width:100%;height:100%}
+  .map-wrap{position:relative;flex:1;min-height:0;overflow:hidden}
+  .map-badge{position:absolute;top:10px;right:10px;z-index:800;background:rgba(13,27,42,.82);backdrop-filter:blur(4px);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:10px;color:var(--txt2)}
+  .map-badge strong{color:var(--txt)}
+
+  /* BOUTONS CARTE personnalisés */
+  .map-controls{position:absolute;bottom:14px;left:10px;z-index:800;display:flex;flex-direction:column;gap:4px}
+  .map-ctrl-btn{width:30px;height:30px;background:rgba(13,27,42,.88);backdrop-filter:blur(4px);border:1px solid var(--border);border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--txt);font-size:14px;font-weight:700;transition:all .15s;user-select:none;line-height:1}
+  .map-ctrl-btn:hover{background:var(--accdark);border-color:var(--accent);color:#fff}
+  .map-ctrl-sep{height:1px;background:var(--border);margin:2px 0}
+
+  /* PLEIN ÉCRAN */
+  .map-wrap.fullscreen{position:fixed;inset:0;z-index:8000;width:100vw;height:100vh}
+  .map-wrap.fullscreen #map{width:100%;height:100%}
+  .map-wrap.fullscreen .map-controls{bottom:20px;left:14px}
+  .map-wrap.fullscreen .map-badge{top:14px;right:14px}
+  .map-wrap.fullscreen .basemap-panel{bottom:20px;left:50px}
+
+  /* SÉLECTEUR FONDS DE CARTE */
+  .basemap-panel{position:absolute;bottom:14px;left:50px;z-index:800;background:rgba(13,27,42,.95);backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:10px;padding:10px 10px 8px;display:none;flex-wrap:wrap;gap:7px;width:222px;box-shadow:0 8px 28px rgba(0,0,0,.55)}
+  .basemap-panel.open{display:flex}
+  .basemap-panel-title{width:100%;font-size:9px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px}
+  .bmap-thumb{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border-radius:7px;padding:4px;border:2px solid transparent;transition:border-color .15s,background .15s;width:calc(33.33% - 5px)}
+  .bmap-thumb:hover{border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.04)}
+  .bmap-thumb.active{border-color:var(--accent)}
+  .bmap-thumb.active .bmap-name{color:var(--accent);font-weight:700}
+  .bmap-img{width:100%;aspect-ratio:1;border-radius:4px;object-fit:cover;background:var(--border);display:block}
+  .bmap-name{font-size:8px;color:var(--txt2);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;padding:0 2px}
+  .map-ctrl-btn.active{background:var(--accdark);border-color:var(--accent);color:#fff}
+
+  /* BOTTOM STRIP */
+  .bottom-strip{flex-shrink:0;height:148px;background:#0A1520;border-top:1px solid var(--border);display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1.3fr) 1px minmax(0,1fr) 1px minmax(0,1fr);overflow:hidden}
+  .bstrip-div{background:var(--border)}
+  .bstrip-panel{padding:10px 14px;display:flex;flex-direction:column;gap:6px;overflow:hidden;min-width:0}
+  .bstrip-title{font-size:9px;font-weight:700;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0}
+
+  /* mini bar périodes */
+  .per-list{display:flex;flex-direction:column;gap:3px;flex:1;justify-content:center}
+  .per-row{display:flex;align-items:center;gap:5px}
+  .per-lbl{font-size:8px;color:var(--txt2);width:58px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .per-bar-bg{flex:1;height:7px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden}
+  .per-bar-fill{height:100%;background:var(--accdark);border-radius:2px;transition:width .4s;opacity:.85}
+  .per-cnt{font-size:8px;color:var(--txt2);min-width:30px;text-align:right}
+
+  /* mini bâtiment pills */
+  .type-pills{display:flex;flex-direction:column;gap:5px;flex:1;justify-content:center}
+  .type-pill{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:7px;padding:5px 8px}
+  .type-icon{font-size:13px;flex-shrink:0}
+  .type-info{flex:1;min-width:0}
+  .type-name{font-size:9px;color:var(--txt);font-weight:600}
+  .type-sub{font-size:8px;color:var(--txt2)}
+  .type-pct{font-size:11px;font-weight:700;color:var(--accent)}
+
+  /* mini CO2 bars */
+  .co2-bars{display:flex;align-items:flex-end;gap:2px;flex:1;padding-top:4px;overflow:hidden}
+  .co2-col{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;min-width:0}
+  .co2-bar{width:100%;border-radius:2px 2px 0 0;transition:height .4s;min-height:2px}
+  .co2-lbl{font-size:7px;color:var(--txt2);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:clip;width:100%}
+
+  /* mini score donut-like */
+  .score-ring-wrap{display:flex;align-items:center;gap:10px;flex:1}
+  .score-ring{position:relative;width:64px;height:64px;flex-shrink:0}
+  .score-ring svg{transform:rotate(-90deg)}
+  .score-ring-val{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:var(--txt)}
+  .score-legend{display:flex;flex-direction:column;gap:4px;flex:1}
+  .score-leg-row{display:flex;align-items:center;gap:5px;font-size:8px;color:var(--txt2)}
+  .score-leg-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+  /* RIGHT PANEL */
+  .rpanel{background:var(--card);border-left:1px solid var(--border);padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+  .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .kpi{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:10px}
+  .kpi-val{font-size:22px;font-weight:800;color:var(--accent);line-height:1}
+  .kpi-lbl{font-size:9px;color:var(--txt2);margin-top:4px;font-weight:500}
+  .kpi-wide{grid-column:span 2}
+
+  /* CHARTS */
+  .chart-wrap{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:12px}
+  .chart-title{font-size:10px;font-weight:700;color:var(--accent);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px}
+  .bar-chart{display:flex;flex-direction:column;gap:5px}
+  .bar-row{display:flex;align-items:center;gap:7px}
+  .bar-key{font-size:9px;width:12px;font-weight:700;text-align:center}
+  .bar-bg{flex:1;height:12px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:3px;transition:width .4s}
+  .bar-cnt{font-size:9px;color:var(--txt2);min-width:32px;text-align:right}
+
+  .donut-wrap{display:flex;gap:12px;align-items:center}
+  .donut-canvas{flex-shrink:0}
+  .donut-legend{display:flex;flex-direction:column;gap:4px;flex:1}
+  .leg-row{display:flex;align-items:center;gap:6px;font-size:9px}
+  .leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+  .heat-list{display:flex;flex-direction:column;gap:4px}
+  .heat-item{display:flex;align-items:center;gap:6px}
+  .heat-name{font-size:9px;color:var(--txt2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .heat-bar-bg{width:80px;height:8px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;flex-shrink:0}
+  .heat-bar-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .4s;opacity:.75}
+  .heat-pct{font-size:9px;color:var(--txt2);min-width:28px;text-align:right}
+
+  /* POPUP */
+  .leaflet-popup-content-wrapper{background:var(--card)!important;color:var(--txt)!important;border:1px solid var(--border)!important;border-radius:10px!important;box-shadow:0 8px 24px rgba(0,0,0,.5)!important}
+  .leaflet-popup-tip{background:var(--card)!important}
+  .pop-dpe{display:inline-block;padding:2px 7px;border-radius:5px;font-weight:700;font-size:12px;margin-bottom:6px}
+  .pop-row{font-size:11px;color:var(--txt2);margin-bottom:2px}
+  .pop-row strong{color:var(--txt)}
+
+  /* CLUSTER override */
+  .marker-cluster-small,.marker-cluster-medium,.marker-cluster-large{background:rgba(0,119,168,.35)!important}
+  .marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{background:rgba(0,180,216,.7)!important;color:#fff!important;font-weight:700}
+
+  /* TOGGLE */
+  .toggle-row{display:flex;align-items:center;justify-content:space-between}
+  .toggle{position:relative;width:34px;height:18px;flex-shrink:0}
+  .toggle input{opacity:0;width:0;height:0}
+  .toggle-track{position:absolute;inset:0;background:var(--border);border-radius:9px;cursor:pointer;transition:background .2s}
+  .toggle input:checked + .toggle-track{background:var(--accdark)}
+  .toggle-track::after{content:'';position:absolute;width:12px;height:12px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s}
+  .toggle input:checked + .toggle-track::after{transform:translateX(16px)}
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+  /* ── RESPONSIVE : tablette paysage (768–1180px) ── */
+  @media (max-width:1180px) {
+    header{gap:10px;padding:0 12px}
+    .logo-sub{display:none}
+    .hdiv{display:none}
+    .search-wrap{max-width:200px}
+    .btn{padding:5px 9px;font-size:10px}
+    .city-btn{padding:5px 9px;font-size:10px}
+    .main{grid-template-columns:188px 1fr 200px}
+    .sidebar{padding:10px;gap:8px}
+    .rpanel{padding:10px;gap:10px}
+    .fcard{padding:9px}
+    .kpi-val{font-size:18px}
+    .bottom-strip{height:130px}
+    .bstrip-panel{padding:8px 10px}
+    .bstrip-title{font-size:8px}
+    .per-lbl{width:48px;font-size:7px}
+    .score-ring{width:52px;height:52px}
+    .score-ring svg{width:52px;height:52px}
+  }
+
+  /* ── RESPONSIVE : petite tablette paysage (≤900px) ── */
+  @media (max-width:900px) {
+    header{height:48px;gap:8px;padding:0 10px}
+    .logo-text{font-size:14px}
+    .logo-icon{width:26px;height:26px;font-size:13px}
+    .search-wrap{max-width:160px}
+    .main{grid-template-columns:164px 1fr 180px}
+    .kpi-grid{gap:5px}
+    .kpi{padding:7px}
+    .kpi-val{font-size:16px}
+    .kpi-lbl{font-size:8px}
+    .chart-wrap{padding:9px}
+    .chart-title{font-size:9px;margin-bottom:7px}
+    .bottom-strip{height:120px;grid-template-columns:minmax(0,1fr) 1px minmax(0,1.2fr) 1px minmax(0,1fr) 1px minmax(0,1fr)}
+    .bstrip-panel{padding:6px 8px;gap:4px}
+    .type-pill{padding:4px 6px}
+    .type-icon{font-size:11px}
+    .per-lbl{width:40px}
+    .score-ring{width:44px;height:44px}
+    .score-ring svg{width:44px;height:44px}
+    .score-ring-val{font-size:13px}
+    .score-leg-row{font-size:7px}
+    .heat-bar-bg{width:56px}
+    .hbtns .btn-o{display:none} /* masque "Exporter" sur petits écrans */
+  }
+
+  /* ── RESPONSIVE : très petite tablette / grand mobile paysage (≤768px) ── */
+  @media (max-width:768px) {
+    header{height:44px;padding:0 8px;gap:6px}
+    .logo-text{font-size:13px}
+    .search-wrap{display:none} /* masque la recherche */
+    .city-btn{padding:4px 8px;font-size:9px}
+    .main{grid-template-columns:0 1fr 0;position:relative}
+    .sidebar{display:none} /* sidebars masquées, accessibles via overlay futur */
+    .rpanel{display:none}
+    .bottom-strip{height:110px;grid-template-columns:minmax(0,1fr) 1px minmax(0,1.2fr) 1px minmax(0,1fr)}
+    /* masque le 4e panneau (score) sur très petits écrans */
+    .bottom-strip > .bstrip-panel:last-child,
+    .bottom-strip > .bstrip-div:nth-child(6){display:none}
+  }
+</style>
 </head>
-
 <body>
-    <div class="splash" id="splash">
-        <div class="splash-logo">Ener<span>Map</span></div>
-        <div class="splash-sub">Chargement des données ADEME — Grenoble…</div>
-        <div class="splash-spin"></div>
-    </div>
-    <div class="prog-wrap hidden" id="progWrap">
-        <div class="prog-bar-bg">
-            <div class="prog-bar-fill" id="progFill" style="width:0%"></div>
-        </div>
-        <div class="prog-label" id="progLabel">Chargement…</div>
-    </div>
-    <header>
-        <div class="logo">
-            <div class="logo-icon">⚡</div>
-            <div>
-                <div class="logo-text">EnerMap <span>Anarouz</span></div>
-                <div class="logo-sub">PERFORMANCE ÉNERGÉTIQUE</div>
-            </div>
-        </div>
-        <div class="hdiv"></div>
-        <div class="search-wrap">
-            <div class="search"><svg width="13" height="13" fill="none" stroke="#8BACC8" stroke-width="2"
-                    viewBox="0 0 24 24">
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="m21 21-4.35-4.35" />
-                </svg><input type="text" id="addrSearch" placeholder="Rechercher une adresse…" autocomplete="off"></div>
-            <div class="suggestions" id="suggestions"></div>
-        </div>
-        <div class="city-selector" id="citySelector"><button class="city-btn active" data-city="grenoble"
-                onclick="switchCity('grenoble')"> 📍 Grenoble<span class="city-loading"></span></button><button
-                class="city-btn" data-city="lyon" onclick="switchCity('lyon')"> 📍 Lyon<span
-                    class="city-loading"></span></button></div>
-        <div class="hbtns"><button class="btn btn-o" onclick="exportCSV()">⬇ Exporter</button><button class="btn btn-p"
-                onclick="generateReport()">📊 Rapport PDF</button></div>
-    </header>
-    <div class="main">
-        <aside class="sidebar">
-            <div class="fcard">
-                <div class="flabel">Étiquette DPE</div>
-                <div class="dpe-grid" id="dpeChips"></div>
-            </div>
-            <div class="fcard">
-                <div class="flabel">Étiquette GES</div>
-                <div class="dpe-grid" id="gesChips"></div>
-            </div>
-            <div class="fcard">
-                <div class="flabel">Surface habitable (m²)</div>
-                <div class="range-row"><span style="font-size:9px;color:var(--txt2)">Min</span><input type="range"
-                        id="surfMin" min="0" max="500" value="0" oninput="applyFilters()"><span class="range-val"
-                        id="surfMinVal">0</span></div>
-                <div class="range-row"><span style="font-size:9px;color:var(--txt2)">Max</span><input type="range"
-                        id="surfMax" min="0" max="500" value="500" oninput="applyFilters()"><span class="range-val"
-                        id="surfMaxVal">500</span></div>
-            </div>
-            <div class="fcard">
-                <div class="flabel">Période de construction</div><select class="sel" id="periodeFilter"
-                    onchange="applyFilters()">
-                    <option value="">Toutes</option>
-                    <option value="avant 1948">Avant 1948</option>
-                    <option value="1948-1974">1948–1974</option>
-                    <option value="1975-1977">1975–1977</option>
-                    <option value="1978-1982">1978–1982</option>
-                    <option value="1983-1988">1983–1988</option>
-                    <option value="1989-2000">1989–2000</option>
-                    <option value="2001-2005">2001–2005</option>
-                    <option value="2006-2012">2006–2012</option>
-                    <option value="2013-2021">2013–2021</option>
-                    <option value="2022 et après">Depuis 2022</option>
-                </select>
-            </div>
-            <div class="fcard">
-                <div class="flabel">Type de bâtiment</div><select class="sel" id="typeFilter" onchange="applyFilters()">
-                    <option value="">Tous</option>
-                    <option value="maison">Maison</option>
-                    <option value="appartement">Appartement</option>
-                    <option value="immeuble">Immeuble</option>
-                </select>
-            </div>
-            <div class="fcard">
-                <div class="flabel">Énergie de chauffage</div><select class="sel" id="heatFilter"
-                    onchange="applyFilters()">
-                    <option value="">Toutes</option>
-                </select>
-            </div>
-            <div class="fcard">
-                <div class="toggle-row"><span class="flabel" style="margin-bottom:0">Mode cluster</span><label
-                        class="toggle"><input type="checkbox" id="clusterToggle" checked
-                            onchange="toggleCluster(this.checked)">
-                        <div class="toggle-track"></div>
-                    </label></div>
-            </div><button class="btn btn-o" style="width:100%;margin-top:4px" onclick="resetFilters()">↺ Réinitialiser
-                filtres</button>
-        </aside>
-        <div class="center-col">
-            <div class="map-wrap" id="mapWrap">
-                <div id="map"></div>
-                <div class="map-badge"><strong id="mapCount">0</strong> dans la vue <span id="mapTotal"
-                        style="color:var(--txt2)"></span> &nbsp;·&nbsp; <span style="cursor:pointer;color:var(--accent)"
-                        onclick="zoomToExtent()" title="Zoom sur l'étendue">⊞ Tout voir</span></div>
-                <div class="map-controls">
-                    <div class="map-ctrl-btn" onclick="map.zoomIn()" title="Zoom +">+</div>
-                    <div class="map-ctrl-btn" onclick="map.zoomOut()" title="Zoom −">−</div>
-                    <div class="map-ctrl-sep"></div>
-                    <div class="map-ctrl-btn" id="fsBtn" onclick="toggleFullscreen()" title="Plein écran">⛶</div>
-                    <div class="map-ctrl-sep"></div>
-                    <div class="map-ctrl-btn" id="bmapBtn" onclick="toggleBasemapPanel()" title="Fonds de carte">🗺
-                    </div>
-                </div>
-                <div class="basemap-panel" id="basemapPanel"></div>
-            </div>
-            <div class="bottom-strip">
-                <div class="bstrip-panel">
-                    <div class="bstrip-title">Période de construction</div>
-                    <div class="per-list" id="perList"></div>
-                </div>
-                <div class="bstrip-div"></div>
-                <div class="bstrip-panel">
-                    <div class="bstrip-title">Types de bâtiment</div>
-                    <div class="type-pills" id="typePills"></div>
-                </div>
-                <div class="bstrip-div"></div>
-                <div class="bstrip-panel">
-                    <div class="bstrip-title">CO₂ moy. par classe (kg/m²)</div>
-                    <div class="co2-bars" id="co2Bars"></div>
-                </div>
-                <div class="bstrip-div"></div>
-                <div class="bstrip-panel">
-                    <div class="bstrip-title">Score DPE global</div>
-                    <div class="score-ring-wrap">
-                        <div class="score-ring"><svg width="64" height="64" viewBox="0 0 64 64">
-                                <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,.06)"
-                                    stroke-width="8" />
-                                <circle id="scoreArc" cx="32" cy="32" r="26" fill="none" stroke="#F3C010"
-                                    stroke-width="8" stroke-dasharray="0 163.4" stroke-linecap="round"
-                                    style="transition:stroke-dasharray .6s,stroke .4s" />
-                            </svg>
-                            <div class="score-ring-val" id="scoreVal">—</div>
-                        </div>
-                        <div class="score-legend" id="scoreLegend"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <aside class="rpanel">
-            <div class="kpi-grid">
-                <div class="kpi kpi-wide">
-                    <div class="kpi-val" id="kpiTotal">—</div>
-                    <div class="kpi-lbl">LOGEMENTS FILTRÉS</div>
-                </div>
-                <div class="kpi">
-                    <div class="kpi-val" id="kpiAvgCo2">—</div>
-                    <div class="kpi-lbl">CO₂ MOY. kg/m²</div>
-                </div>
-                <div class="kpi">
-                    <div class="kpi-val" id="kpiAvgSurf">—</div>
-                    <div class="kpi-lbl">SURFACE MOY. m²</div>
-                </div>
-                <div class="kpi">
-                    <div class="kpi-val" id="kpiDpeA">—</div>
-                    <div class="kpi-lbl">% CLASSE A+B</div>
-                </div>
-                <div class="kpi">
-                    <div class="kpi-val" id="kpiDpeEFG">—</div>
-                    <div class="kpi-lbl">% PASSOIRES (F+G)</div>
-                </div>
-            </div>
-            <div class="chart-wrap">
-                <div class="chart-title">Répartition DPE</div>
-                <div class="bar-chart" id="dpeChart"></div>
-            </div>
-            <div class="chart-wrap">
-                <div class="chart-title">Énergie de chauffage</div>
-                <div class="heat-list" id="heatChart"></div>
-            </div>
-            <div class="chart-wrap">
-                <div class="chart-title">Répartition GES</div>
-                <div class="bar-chart" id="gesChart"></div>
-            </div>
-            <div class="chart-wrap" style="font-size:9px;color:var(--txt2);line-height:1.6"> Source : ADEME — DPE
-                Logements existants<br> Licence Etalab 2.0 · Mise à jour en temps réel </div>
-        </aside>
-    </div>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-    <script> const API_BASE = 'https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant'; const CITIES = { grenoble: { label: 'Grenoble', filter: 'code_insee_ban:"38185"', center: [45.188, 5.724], zoom: 13, viewbox: '5.65,45.25,5.83,45.10', bbox: { latMin: 45.10, latMax: 45.26, lngMin: 5.60, lngMax: 5.84 }, }, lyon: { label: 'Lyon', filter: 'nom_commune_ban:"Lyon"', center: [45.748, 4.847], zoom: 13, viewbox: '4.72,45.83,4.98,45.68', bbox: { latMin: 45.68, latMax: 45.83, lngMin: 4.72, lngMax: 4.98 }, }, }; let currentCity = 'grenoble'; const DPE_FIELDS = ['_geopoint', 'adresse_ban', 'adresse_brut', 'etiquette_dpe', 'etiquette_ges', 'surface_habitable_logement', 'type_energie_principale_chauffage', 'emission_ges_5_usages_par_m2', 'periode_construction', 'date_etablissement_dpe', 'type_batiment', 'code_postal_ban', 'numero_dpe'].join(','); const DPE_COLORS = { A: '#1B7340', B: '#27AE60', C: '#82C341', D: '#F3C010', E: '#E67E22', F: '#E74C3C', G: '#8E1010' }; const DPE_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G']; let ALL = []; let FILT = []; let VIEW = []; let TOTAL_API = null; let streaming = true; let activeDPE = new Set(['A', 'B', 'C', 'D', 'E', 'F', 'G']); let activeGES = new Set(['A', 'B', 'C', 'D', 'E', 'F', 'G']); const map = L.map('map', { center: [45.188, 5.724], zoom: 13, zoomControl: false, preferCanvas: true }); const styleEl = document.createElement('style'); styleEl.textContent = `.osm-dark{filter:brightness(.82) saturate(.65) hue-rotate(180deg) invert(1) hue-rotate(180deg)}`; document.head.appendChild(styleEl); const BASEMAPS = [{ id: 'osm', name: 'OSM Standard', url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', opts: { attribution: '© OpenStreetMap', maxZoom: 19, className: 'osm-dark' }, thumb: 'https://tile.openstreetmap.org/12/2113/1469.png', }, { id: 'carto-dark', name: 'Carto Dark', url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', opts: { attribution: '© CartoDB', maxZoom: 19, subdomains: 'abcd' }, thumb: 'https://a.basemaps.cartocdn.com/dark_all/12/2113/1469.png', }, { id: 'carto-light', name: 'Carto Clair', url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', opts: { attribution: '© CartoDB', maxZoom: 19, subdomains: 'abcd' }, thumb: 'https://a.basemaps.cartocdn.com/light_all/12/2113/1469.png', }, { id: 'topo', name: 'Topo', url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', opts: { attribution: '© OpenTopoMap', maxZoom: 17 }, thumb: 'https://a.tile.opentopomap.org/12/2113/1469.png', }, { id: 'satellite', name: 'Satellite', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', opts: { attribution: '© Esri', maxZoom: 19 }, thumb: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/12/1469/2113', }, { id: 'esri-topo', name: 'Esri Topo', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', opts: { attribution: '© Esri', maxZoom: 19 }, thumb: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/12/1469/2113', },]; let currentTileLayer = null; let currentBasemapId = 'osm'; currentTileLayer = L.tileLayer(BASEMAPS[0].url, BASEMAPS[0].opts).addTo(map); function buildBasemapPanel() { const panel = document.getElementById('basemapPanel'); panel.innerHTML = '<div class="basemap-panel-title">Fond de carte</div>'; BASEMAPS.forEach(bm => { const div = document.createElement('div'); div.className = 'bmap-thumb' + (bm.id === currentBasemapId ? ' active' : ''); div.dataset.id = bm.id; div.title = bm.name; div.onclick = () => switchBasemap(bm.id); const img = document.createElement('img'); img.className = 'bmap-img'; img.src = bm.thumb; img.alt = bm.name; img.loading = 'lazy'; img.onerror = () => { img.style.background = 'var(--border)'; img.src = ''; }; const lbl = document.createElement('div'); lbl.className = 'bmap-name'; lbl.textContent = bm.name; div.appendChild(img); div.appendChild(lbl); panel.appendChild(div); }); } function switchBasemap(id) { if (id === currentBasemapId) { toggleBasemapPanel(false); return; } const bm = BASEMAPS.find(b => b.id === id); if (!bm) return; if (currentTileLayer) map.removeLayer(currentTileLayer); currentTileLayer = L.tileLayer(bm.url, bm.opts).addTo(map); currentTileLayer.bringToBack(); currentBasemapId = id; document.querySelectorAll('.bmap-thumb').forEach(el => el.classList.toggle('active', el.dataset.id === id)); toggleBasemapPanel(false); } function toggleBasemapPanel(force) { const panel = document.getElementById('basemapPanel'); const btn = document.getElementById('bmapBtn'); const isOpen = panel.classList.contains('open'); const open = force !== undefined ? force : !isOpen; panel.classList.toggle('open', open); btn.classList.toggle('active', open); } document.addEventListener('click', e => { if (!e.target.closest('#basemapPanel') && !e.target.closest('#bmapBtn')) { toggleBasemapPanel(false); } }); buildBasemapPanel(); let clusterMode = true; function makeClusterGroup() { return L.markerClusterGroup({ chunkedLoading: true, chunkInterval: 200, maxClusterRadius: 60, spiderfyOnMaxZoom: true, showCoverageOnHover: false, }); } let clusters = makeClusterGroup(); map.addLayer(clusters); function toggleCluster(enabled) { clusterMode = enabled; map.removeLayer(clusters); clusters = clusterMode ? makeClusterGroup() : L.layerGroup(); map.addLayer(clusters); addMarkersFromBatch(FILT); } let _viewDebounce = null; map.on('moveend zoomend', () => { clearTimeout(_viewDebounce); _viewDebounce = setTimeout(() => { if (FILT.length > 0) updateAll(); }, 120); }); function parseRecord(d) { if (!d._geopoint) return null; const parts = d._geopoint.split(','); const lat = parseFloat(parts[0]); const lng = parseFloat(parts[1]); if (isNaN(lat) || isNaN(lng)) return null; const bbox = CITIES[currentCity].bbox; if (lat < bbox.latMin || lat > bbox.latMax || lng < bbox.lngMin || lng > bbox.lngMax) return null; return { lat, lng, dpe: (d.etiquette_dpe || '').toUpperCase().trim(), ges: (d.etiquette_ges || '').toUpperCase().trim(), surf: d.surface_habitable_logement ? Math.round(d.surface_habitable_logement) : null, heat: d.type_energie_principale_chauffage || null, co2: d.emission_ges_5_usages_par_m2 != null ? Math.round(d.emission_ges_5_usages_par_m2) : null, per: d.periode_construction || null, date: (d.date_etablissement_dpe || '').slice(0, 7), type: d.type_batiment || null, addr: d.adresse_ban || d.adresse_brut || null, cp: d.code_postal_ban || null, id: d.numero_dpe || null, }; } function applyFiltersFn(records) { const surfMin = +document.getElementById('surfMin').value; const surfMax = +document.getElementById('surfMax').value; const periode = document.getElementById('periodeFilter').value; const typeBat = document.getElementById('typeFilter').value.toLowerCase(); const heat = document.getElementById('heatFilter').value; return records.filter(d => { if (!activeDPE.has(d.dpe) && d.dpe) return false; if (!activeGES.has(d.ges) && d.ges) return false; if (d.surf !== null && d.surf < surfMin) return false; if (d.surf !== null && surfMax < 500 && d.surf > surfMax) return false; if (periode && d.per && !d.per.toLowerCase().includes(periode.toLowerCase())) return false; if (typeBat && d.type && !d.type.toLowerCase().includes(typeBat)) return false; if (heat && d.heat && d.heat !== heat) return false; return true; }); } function makeMarker(d) { const color = DPE_COLORS[d.dpe] || '#555'; const m = L.circleMarker([d.lat, d.lng], { radius: 6, fillColor: color, fillOpacity: 0.85, color: '#000', weight: 0.5, }); m.bindPopup(() => { const dpeColor = DPE_COLORS[d.dpe] || '#555'; return ` <div style="min-width:180px"><div class="pop-dpe" style="background:${dpeColor}">${d.dpe || '?'}</div><div class="pop-row">${d.addr || 'Adresse inconnue'}</div><hr style="border-color:rgba(255,255,255,.1);margin:6px 0"><div class="pop-row">GES : <strong>${d.ges || '—'}</strong></div><div class="pop-row">Surface : <strong>${d.surf ? d.surf + ' m²' : '—'}</strong></div><div class="pop-row">CO₂ : <strong>${d.co2 != null ? d.co2 + ' kg/m²' : '—'}</strong></div><div class="pop-row">Énergie : <strong>${d.heat || '—'}</strong></div><div class="pop-row">Période : <strong>${d.per || '—'}</strong></div><div class="pop-row">Type : <strong>${d.type || '—'}</strong></div><div class="pop-row" style="margin-top:6px;font-size:9px;color:var(--txt2)">DPE n° ${d.id || '—'}</div></div>`; }, { maxWidth: 240 }); return m; } function addMarkersFromBatch(records) { if (clusterMode) { clusters.addLayers(records.map(makeMarker)); } else { records.forEach(d => clusters.addLayer(makeMarker(d))); } } function computeView() { const bounds = map.getBounds(); VIEW = FILT.filter(d => bounds.contains([d.lat, d.lng])); } function updateAll() { computeView(); const n = VIEW.length; const nAll = FILT.length; document.getElementById('kpiTotal').textContent = n.toLocaleString('fr-FR'); document.getElementById('mapCount').textContent = n.toLocaleString('fr-FR'); const mapTotal = document.getElementById('mapTotal'); if (mapTotal) { mapTotal.textContent = n < nAll ? ' / ' + nAll.toLocaleString('fr-FR') + ' filtrés' : ''; } const kpiLbl = document.querySelector('#kpiTotal + .kpi-lbl') || document.querySelector('.kpi-wide .kpi-lbl'); if (kpiLbl) kpiLbl.textContent = n < nAll ? 'DANS LA VUE CARTE' : 'LOGEMENTS FILTRÉS'; const withCo2 = VIEW.filter(d => d.co2 != null); const withSurf = VIEW.filter(d => d.surf != null); const avgCo2 = withCo2.length ? Math.round(withCo2.reduce((s, d) => s + d.co2, 0) / withCo2.length) : null; const avgSurf = withSurf.length ? Math.round(withSurf.reduce((s, d) => s + d.surf, 0) / withSurf.length) : null; document.getElementById('kpiAvgCo2').textContent = avgCo2 != null ? avgCo2 : '—'; document.getElementById('kpiAvgSurf').textContent = avgSurf != null ? avgSurf : '—'; const abCount = VIEW.filter(d => d.dpe === 'A' || d.dpe === 'B').length; const fgCount = VIEW.filter(d => d.dpe === 'F' || d.dpe === 'G').length; document.getElementById('kpiDpeA').textContent = n ? Math.round(abCount / n * 100) + '%' : '—'; document.getElementById('kpiDpeEFG').textContent = n ? Math.round(fgCount / n * 100) + '%' : '—'; updateBarChart('dpeChart', DPE_LABELS, VIEW, d => d.dpe, DPE_COLORS); updateBarChart('gesChart', DPE_LABELS, VIEW, d => d.ges, DPE_COLORS); updateHeatChart(); updateDpeChipCounts(); updateBottomStrip(); } function updateBarChart(containerId, keys, data, keyFn, colors) { const counts = {}; keys.forEach(k => counts[k] = 0); data.forEach(d => { const k = keyFn(d); if (k && counts[k] !== undefined) counts[k]++; }); const max = Math.max(...Object.values(counts), 1); const el = document.getElementById(containerId); el.innerHTML = keys.map(k => ` <div class="bar-row"><div class="bar-key" style="color:${colors[k]}">${k}</div><div class="bar-bg"><div class="bar-fill" style="width:${Math.round(counts[k] / max * 100)}%;background:${colors[k]}"></div></div><div class="bar-cnt">${counts[k].toLocaleString('fr-FR')}</div></div>`).join(''); } function updateHeatChart() { const counts = {}; VIEW.forEach(d => { if (d.heat) counts[d.heat] = (counts[d.heat] || 0) + 1; }); const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8); const max = sorted.length ? sorted[0][1] : 1; document.getElementById('heatChart').innerHTML = sorted.map(([name, cnt]) => ` <div class="heat-item"><div class="heat-name" title="${name}">${name}</div><div class="heat-bar-bg"><div class="heat-bar-fill" style="width:${Math.round(cnt / max * 100)}%"></div></div><div class="heat-pct">${cnt.toLocaleString('fr-FR')}</div></div>`).join(''); } function updateDpeChipCounts() { document.querySelectorAll('.chip[data-dpe]').forEach(chip => { const key = chip.dataset.dpe; const cnt = VIEW.filter(d => d.dpe === key).length; const el = chip.querySelector('.chip-cnt'); if (el) el.textContent = cnt.toLocaleString('fr-FR'); }); document.querySelectorAll('.chip[data-ges]').forEach(chip => { const key = chip.dataset.ges; const cnt = VIEW.filter(d => d.ges === key).length; const el = chip.querySelector('.chip-cnt'); if (el) el.textContent = cnt.toLocaleString('fr-FR'); }); } function updateBottomStrip() { const n = VIEW.length; if (!n) return; const PERIODE_ORDER = ['avant 1948', '1948-1974', '1975-1977', '1978-1982', '1983-1988', '1989-2000', '2001-2005', '2006-2012', '2013-2021', '2022 et après']; const perCounts = {}; VIEW.forEach(d => { if (d.per) perCounts[d.per] = (perCounts[d.per] || 0) + 1; }); const perSorted = PERIODE_ORDER.filter(p => perCounts[p]).map(p => [p, perCounts[p]]); const perMax = perSorted.length ? Math.max(...perSorted.map(([, c]) => c)) : 1; document.getElementById('perList').innerHTML = perSorted.map(([lbl, cnt]) => ` <div class="per-row"><div class="per-lbl" title="${lbl}">${lbl}</div><div class="per-bar-bg"><div class="per-bar-fill" style="width:${Math.round(cnt / perMax * 100)}%"></div></div><div class="per-cnt">${cnt.toLocaleString('fr-FR')}</div></div>`).join(''); const TYPE_ICONS = { maison: '🏠', appartement: '🏢', immeuble: '🏗️' }; const typeCounts = {}; VIEW.forEach(d => { if (d.type) typeCounts[d.type] = (typeCounts[d.type] || 0) + 1; }); const typeSorted = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]).slice(0, 3); document.getElementById('typePills').innerHTML = typeSorted.map(([type, cnt]) => ` <div class="type-pill"><div class="type-icon">${TYPE_ICONS[type] || '🏠'}</div><div class="type-info"><div class="type-name">${type.charAt(0).toUpperCase() + type.slice(1)}</div><div class="type-sub">${cnt.toLocaleString('fr-FR')} logements</div></div><div class="type-pct">${Math.round(cnt / n * 100)}%</div></div>`).join(''); const co2ByDpe = {}; DPE_LABELS.forEach(k => co2ByDpe[k] = { sum: 0, count: 0 }); VIEW.forEach(d => { if (d.dpe && d.co2 != null && co2ByDpe[d.dpe]) { co2ByDpe[d.dpe].sum += d.co2; co2ByDpe[d.dpe].count++; } }); const co2Avgs = DPE_LABELS.map(k => ({ k, avg: co2ByDpe[k].count ? Math.round(co2ByDpe[k].sum / co2ByDpe[k].count) : 0 })); const co2Max = Math.max(...co2Avgs.map(d => d.avg), 1); const barH = 76; document.getElementById('co2Bars').innerHTML = co2Avgs.map(({ k, avg }) => ` <div class="co2-col"><div class="co2-bar" style="height:${avg ? Math.max(4, Math.round(avg / co2Max * barH)) + 'px' : '4px'};background:${DPE_COLORS[k]}"></div><div class="co2-lbl" style="color:${DPE_COLORS[k]};font-weight:700">${k}</div><div class="co2-lbl">${avg || '—'}</div></div>`).join(''); const DPE_SCORE = { A: 1, B: 2, C: 3, D: 4, E: 5, F: 6, G: 7 }; const scorable = VIEW.filter(d => d.dpe && DPE_SCORE[d.dpe]); const avgScore = scorable.length ? scorable.reduce((s, d) => s + DPE_SCORE[d.dpe], 0) / scorable.length : null; const scoreLabel = avgScore ? DPE_LABELS[Math.round(avgScore) - 1] || 'D' : '—'; const scoreColor = DPE_COLORS[scoreLabel] || '#555'; const CIRCUM = 2 * Math.PI * 26; const arc = avgScore ? Math.round((avgScore - 1) / 6 * CIRCUM * 10) / 10 : 0; document.getElementById('scoreArc').setAttribute('stroke-dasharray', `${arc} ${CIRCUM}`); document.getElementById('scoreArc').setAttribute('stroke', scoreColor); document.getElementById('scoreVal').textContent = scoreLabel; document.getElementById('scoreVal').style.color = scoreColor; const dpeCounts2 = {}; DPE_LABELS.forEach(k => dpeCounts2[k] = 0); VIEW.forEach(d => { if (d.dpe) dpeCounts2[d.dpe]++; }); const top3 = DPE_LABELS.filter(k => dpeCounts2[k] > 0).sort((a, b) => dpeCounts2[b] - dpeCounts2[a]).slice(0, 4); document.getElementById('scoreLegend').innerHTML = top3.map(k => ` <div class="score-leg-row"><div class="score-leg-dot" style="background:${DPE_COLORS[k]}"></div><span style="color:${DPE_COLORS[k]};font-weight:700">${k}</span><span style="margin-left:2px">${Math.round(dpeCounts2[k] / n * 100)}% · ${dpeCounts2[k].toLocaleString('fr-FR')}</span></div>`).join(''); } function initChips() { const dpeContainer = document.getElementById('dpeChips'); const gesContainer = document.getElementById('gesChips'); DPE_LABELS.forEach(lbl => { const chip = document.createElement('div'); chip.className = 'chip on'; chip.dataset.dpe = lbl; chip.innerHTML = `<div class="chip-dot" style="background:${DPE_COLORS[lbl]}"></div><span class="chip-lbl">${lbl}</span><span class="chip-cnt">—</span>`; chip.addEventListener('click', () => { if (activeDPE.has(lbl)) { activeDPE.delete(lbl); chip.classList.remove('on'); } else { activeDPE.add(lbl); chip.classList.add('on'); } applyFilters(); }); dpeContainer.appendChild(chip); const gchip = document.createElement('div'); gchip.className = 'chip on'; gchip.dataset.ges = lbl; gchip.innerHTML = `<div class="chip-dot" style="background:${DPE_COLORS[lbl]}"></div><span class="chip-lbl">${lbl}</span><span class="chip-cnt">—</span>`; gchip.addEventListener('click', () => { if (activeGES.has(lbl)) { activeGES.delete(lbl); gchip.classList.remove('on'); } else { activeGES.add(lbl); gchip.classList.add('on'); } applyFilters(); }); gesContainer.appendChild(gchip); });['surfMin', 'surfMax'].forEach(id => { const el = document.getElementById(id); el.addEventListener('input', () => { document.getElementById(id + 'Val').textContent = el.value === '500' ? '500+' : el.value; }); }); } function applyFilters() { FILT = applyFiltersFn(ALL); clusters.clearLayers(); addMarkersFromBatch(FILT); updateAll(); } function resetFilters() { activeDPE = new Set(DPE_LABELS); activeGES = new Set(DPE_LABELS); document.querySelectorAll('.chip').forEach(c => c.classList.add('on')); document.getElementById('surfMin').value = 0; document.getElementById('surfMax').value = 500; document.getElementById('surfMinVal').textContent = '0'; document.getElementById('surfMaxVal').textContent = '500+'; document.getElementById('periodeFilter').value = ''; document.getElementById('typeFilter').value = ''; document.getElementById('heatFilter').value = ''; applyFilters(); } function updateProgress(loaded, total) { const pct = total ? Math.min(100, Math.round(loaded / total * 100)) : 0; document.getElementById('progFill').style.width = pct + '%'; const totalStr = total ? total.toLocaleString('fr-FR') : '…'; document.getElementById('progLabel').textContent = `${loaded.toLocaleString('fr-FR')} / ${totalStr} logements chargés (${pct}%)`; } function refreshHeatSelect() { const counts = {}; ALL.forEach(d => { if (d.heat) counts[d.heat] = (counts[d.heat] || 0) + 1; }); const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]); const sel = document.getElementById('heatFilter'); const current = sel.value; sel.innerHTML = '<option value="">Toutes</option>'; sorted.forEach(([name]) => { const opt = document.createElement('option'); opt.value = name; opt.textContent = name; if (name === current) opt.selected = true; sel.appendChild(opt); }); } let streamAbort = false; async function switchCity(cityKey) { if (cityKey === currentCity && ALL.length > 0) return; document.querySelectorAll('.city-btn').forEach(b => { b.classList.toggle('active', b.dataset.city === cityKey); b.classList.remove('loading'); }); document.querySelector(`.city-btn[data-city="${cityKey}"]`).classList.add('loading'); streamAbort = true; await new Promise(r => setTimeout(r, 50)); streamAbort = false; currentCity = cityKey; ALL = []; FILT = []; TOTAL_API = null; streaming = true; activeDPE = new Set(DPE_LABELS); activeGES = new Set(DPE_LABELS); document.querySelectorAll('.chip').forEach(c => c.classList.add('on')); document.getElementById('surfMin').value = 0; document.getElementById('surfMax').value = 500; document.getElementById('surfMinVal').textContent = '0'; document.getElementById('surfMaxVal').textContent = '500+'; document.getElementById('periodeFilter').value = ''; document.getElementById('typeFilter').value = ''; document.getElementById('heatFilter').innerHTML = '<option value="">Toutes</option>'; const city = CITIES[cityKey]; clusters.clearLayers(); map.setView(city.center, city.zoom); nominatimViewbox = city.viewbox; streamDPE(); } async function streamDPE() { const splash = document.getElementById('splash'); const progWrap = document.getElementById('progWrap'); let afterCursor = null; let page = 0; const cityKey = currentCity; try { while (true) { if (streamAbort || currentCity !== cityKey) break; const city = CITIES[cityKey]; const url = new URL(`${API_BASE}/lines`); url.searchParams.set('qs', city.filter); url.searchParams.set('size', '10000'); url.searchParams.set('select', DPE_FIELDS); url.searchParams.set('sort', '-date_etablissement_dpe'); if (afterCursor) url.searchParams.set('after', afterCursor); const res = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } }); if (!res.ok) throw new Error(`HTTP ${res.status}`); const data = await res.json(); if (data.error) throw new Error('API error: ' + data.error); if (TOTAL_API === null) TOTAL_API = data.total; const records = (data.results || []).map(parseRecord).filter(Boolean); if (page === 0) { splash.classList.add('gone'); progWrap.classList.remove('hidden'); map.invalidateSize(); refreshHeatSelect(); } ALL = ALL.concat(records); const newFiltered = applyFiltersFn(records); addMarkersFromBatch(newFiltered); FILT = applyFiltersFn(ALL); updateAll(); updateProgress(ALL.length, TOTAL_API); if (page === 0 || page % 2 === 0) refreshHeatSelect(); afterCursor = data.next ? new URL(data.next).searchParams.get('after') : null; page++; if (!afterCursor) break; await new Promise(r => setTimeout(r, 150)); } streaming = false; document.querySelector(`.city-btn[data-city="${cityKey}"]`)?.classList.remove('loading'); updateProgress(ALL.length, TOTAL_API); await new Promise(r => setTimeout(r, 2000)); progWrap.classList.add('hidden'); refreshHeatSelect(); } catch (err) { console.error('EnerMap stream error:', err); document.getElementById('progLabel').textContent = '⚠ Erreur de chargement: ' + err.message; if (page === 0) { splash.classList.add('gone'); progWrap.classList.remove('hidden'); } } } function exportCSV() { const headers = ['lat', 'lng', 'dpe', 'ges', 'surf', 'co2', 'heat', 'per', 'type', 'addr', 'cp', 'id']; const rows = FILT.map(d => headers.map(h => { const v = d[h]; if (v == null) return ''; if (typeof v === 'string' && v.includes(',')) return `"${v}"`; return v; }).join(',')); const csv = [headers.join(','), ...rows].join('\n'); const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'enermap-grenoble.csv'; a.click(); URL.revokeObjectURL(url); } function zoomToExtent() { const records = FILT.length > 0 ? FILT : ALL; if (records.length === 0) return; const bounds = L.latLngBounds(records.map(d => [d.lat, d.lng])); map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16, animate: true }); } const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search'; let nominatimViewbox = CITIES[currentCity].viewbox; let searchTimeout; const addrInput = document.getElementById('addrSearch'); const suggestions = document.getElementById('suggestions'); addrInput.addEventListener('input', e => { clearTimeout(searchTimeout); const q = e.target.value.trim(); if (q.length < 3) { hideSuggestions(); return; } searchTimeout = setTimeout(() => fetchSuggestions(q), 400); }); addrInput.addEventListener('keydown', e => { if (e.key === 'Escape') { hideSuggestions(); addrInput.blur(); } }); document.addEventListener('click', e => { if (!e.target.closest('.search-wrap')) hideSuggestions(); }); async function fetchSuggestions(q) { try { const url = `${NOMINATIM_URL}?format=json&q=${encodeURIComponent(q)}&viewbox=${nominatimViewbox}&bounded=1&limit=6&accept-language=fr`; const res = await fetch(url, { headers: { 'Accept': 'application/json' } }); const data = await res.json(); showSuggestions(data); } catch (e) { hideSuggestions(); } } function showSuggestions(results) { if (!results || results.length === 0) { hideSuggestions(); return; } suggestions.innerHTML = results.map(r => { const label = r.display_name.split(', ').slice(0, 3).join(', '); return `<div class="sugg-item" data-lat="${r.lat}" data-lon="${r.lon}">${label}</div>`; }).join(''); suggestions.querySelectorAll('.sugg-item').forEach(el => { el.addEventListener('click', () => { map.setView([+el.dataset.lat, +el.dataset.lon], 16, { animate: true }); addrInput.value = el.textContent; hideSuggestions(); }); }); suggestions.classList.add('open'); } function hideSuggestions() { suggestions.classList.remove('open'); suggestions.innerHTML = ''; } let _isFullscreen = false; function toggleFullscreen() { const wrap = document.getElementById('mapWrap'); const btn = document.getElementById('fsBtn'); _isFullscreen = !_isFullscreen; wrap.classList.toggle('fullscreen', _isFullscreen); btn.textContent = _isFullscreen ? '✕' : '⛶'; btn.title = _isFullscreen ? 'Quitter le plein écran' : 'Plein écran'; setTimeout(() => map.invalidateSize(), 50); } document.addEventListener('keydown', e => { if (e.key === 'Escape' && _isFullscreen) toggleFullscreen(); }); function generateReport() { if (!window.jspdf) { alert('Bibliothèque PDF non chargée, réessayez dans un instant.'); return; } const { jsPDF } = window.jspdf; const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }); const PW = 210, PH = 297, ML = 15, MR = 15, MT = 32, MB = 20; const CW = PW - ML - MR; const CITY = CITIES[currentCity]; const now = new Date(); const dateStr = now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }); const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }); const C_BG = [13, 27, 42], C_ACC = [0, 180, 216], C_TXT = [232, 244, 253], C_TXT2 = [139, 172, 200]; const DPE_RGB = { A: [27, 115, 64], B: [39, 174, 96], C: [130, 195, 65], D: [243, 192, 16], E: [230, 126, 34], F: [231, 76, 60], G: [142, 16, 16] }; function drawHeader() { doc.setFillColor(...C_BG); doc.rect(0, 0, PW, 28, 'F'); doc.setFillColor(...C_ACC); doc.roundedRect(ML, 7, 13, 13, 2, 2, 'F'); doc.setTextColor(255, 255, 255); doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.text('E', ML + 4, 15); doc.setTextColor(...C_TXT); doc.setFontSize(13); doc.setFont('helvetica', 'bold'); doc.text('EnerMap', ML + 16, 14); doc.setTextColor(...C_ACC); doc.text('Anarouz', ML + 39, 14); doc.setTextColor(...C_TXT2); doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.text(CITY.label.toUpperCase() + ' · ' + dateStr, ML + 16, 19); doc.setTextColor(...C_TXT); doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.text('RAPPORT DE PERFORMANCE ENERGETIQUE', PW - MR, 16, { align: 'right' }); doc.setTextColor(0, 180, 216); doc.setLineWidth(0.5); doc.line(0, 28, PW, 28); } function drawFooter(pageNum) { doc.setFillColor(...C_BG); doc.rect(0, PH - 16, PW, 16, 'F'); doc.setTextColor(...C_TXT2); doc.setFontSize(6.5); doc.setFont('helvetica', 'normal'); doc.text('Source : ADEME - DPE Logements existants (dpe03existant) - Licence Etalab 2.0 - Genere le ' + dateStr + ' a ' + timeStr, ML, PH - 7); doc.setTextColor(...C_ACC); doc.text('Page ' + pageNum, PW - MR, PH - 7, { align: 'right' }); } function secTitle(text, y) { doc.setFillColor(...C_ACC); doc.rect(ML, y, 3, 6, 'F'); doc.setTextColor(...C_BG); doc.setFontSize(8.5); doc.setFont('helvetica', 'bold'); doc.text(text, ML + 5, y + 4.5); doc.setDrawColor(200, 225, 240); doc.setLineWidth(0.2); doc.line(ML + 5, y + 6.5, PW - MR, y + 6.5); return y + 10; } function barRow(label, cnt, total, maxCnt, x, y, w, color) { const pct = total ? (cnt / total * 100).toFixed(1) : '0.0'; const fill = maxCnt ? Math.max(1, Math.round(cnt / maxCnt * (w - 28))) : 0; doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 80, 100); const shortLbl = label.length > 24 ? label.slice(0, 22) + '...' : label; doc.text(shortLbl, x, y + 3.5); doc.setFillColor(230, 240, 248); doc.roundedRect(x, y + 4.5, w - 28, 4, 1, 1, 'F'); if (fill > 0) { doc.setFillColor(...color); doc.roundedRect(x, y + 4.5, fill, 4, 1, 1, 'F'); } doc.setTextColor(100, 130, 155); doc.text(pct + '%', x + w - 26, y + 7.5, { align: 'right' }); doc.text(cnt.toLocaleString('fr-FR'), x + w, y + 7.5, { align: 'right' }); return y + 11; } const n = FILT.length; const withCo2 = FILT.filter(d => d.co2 != null); const withSurf = FILT.filter(d => d.surf != null); const avgCo2 = withCo2.length ? Math.round(withCo2.reduce((s, d) => s + d.co2, 0) / withCo2.length) : null; const avgSurf = withSurf.length ? Math.round(withSurf.reduce((s, d) => s + d.surf, 0) / withSurf.length) : null; const abCount = FILT.filter(d => d.dpe === 'A' || d.dpe === 'B').length; const fgCount = FILT.filter(d => d.dpe === 'F' || d.dpe === 'G').length; const dpeCounts = {}, gesCounts = {}; DPE_LABELS.forEach(k => { dpeCounts[k] = 0; gesCounts[k] = 0; }); FILT.forEach(d => { if (d.dpe) dpeCounts[d.dpe]++; if (d.ges) gesCounts[d.ges]++; }); const heatCounts = {}; FILT.forEach(d => { if (d.heat) heatCounts[d.heat] = (heatCounts[d.heat] || 0) + 1; }); const heatSorted = Object.entries(heatCounts).sort((a, b) => b[1] - a[1]).slice(0, 8); const PERIODE_ORDER = ['avant 1948', '1948-1974', '1975-1977', '1978-1982', '1983-1988', '1989-2000', '2001-2005', '2006-2012', '2013-2021', '2022 et apres']; const perCounts = {}; FILT.forEach(d => { if (d.per) perCounts[d.per] = (perCounts[d.per] || 0) + 1; }); const crossData = {}; DPE_LABELS.forEach(k => { crossData[k] = { appartement: 0, maison: 0, immeuble: 0, total: 0 }; }); FILT.forEach(d => { if (d.dpe && crossData[d.dpe] && d.type) { const t = d.type.toLowerCase(); if (crossData[d.dpe][t] !== undefined) { crossData[d.dpe][t]++; crossData[d.dpe].total++; } } }); const surfMinV = document.getElementById('surfMin').value; const surfMaxV = document.getElementById('surfMax').value; const periodeV = document.getElementById('periodeFilter').value; const typeV = document.getElementById('typeFilter').value; const heatV = document.getElementById('heatFilter').value; const filterRows = [['Etiquettes DPE', [...activeDPE].sort().join(', ') || 'Aucune'], ['Etiquettes GES', [...activeGES].sort().join(', ') || 'Aucune'], ['Surface habitable', surfMinV + ' m² → ' + (surfMaxV === '500' ? '500+ m²' : surfMaxV + ' m²')], ['Periode construction', periodeV || 'Toutes'], ['Type de batiment', typeV || 'Tous'], ['Energie de chauffage', heatV || 'Toutes'],]; drawHeader(); let y = MT + 3; y = secTitle('FILTRES APPLIQUES', y); doc.autoTable({ startY: y, margin: { left: ML, right: MR }, head: [], body: filterRows, styles: { fontSize: 7.5, cellPadding: 2.5 }, columnStyles: { 0: { fontStyle: 'bold', fillColor: [238, 245, 252], textColor: [13, 27, 42], cellWidth: 52 }, 1: { textColor: [50, 70, 90] } }, theme: 'grid', tableLineColor: [200, 220, 235], tableLineWidth: 0.2, }); y = doc.lastAutoTable.finalY + 7; y = secTitle('INDICATEURS CLES', y); const kW3 = (CW - 6) / 3; const kpis3 = [{ val: n.toLocaleString('fr-FR'), lbl: 'LOGEMENTS FILTRES', sub: 'sur ' + ALL.length.toLocaleString('fr-FR') + ' DPEs ' + CITY.label }, { val: avgCo2 != null ? avgCo2 + ' kg/m²' : '—', lbl: 'EMISSIONS CO2 MOY.', sub: 'kgCO2eq/m²/an' }, { val: avgSurf != null ? avgSurf + ' m²' : '—', lbl: 'SURFACE MOYENNE', sub: 'm² habitables' },]; kpis3.forEach((k, i) => { const kx = ML + i * (kW3 + 3); doc.setFillColor(238, 248, 253); doc.setDrawColor(180, 215, 235); doc.setLineWidth(0.3); doc.roundedRect(kx, y, kW3, 18, 2, 2, 'FD'); doc.setTextColor(0, 150, 190); doc.setFontSize(14); doc.setFont('helvetica', 'bold'); doc.text(k.val, kx + kW3 / 2, y + 10, { align: 'center' }); doc.setTextColor(40, 65, 90); doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.text(k.lbl, kx + kW3 / 2, y + 14, { align: 'center' }); doc.setFont('helvetica', 'normal'); doc.setTextColor(120, 150, 175); doc.text(k.sub, kx + kW3 / 2, y + 17, { align: 'center' }); }); y += 22; const kW2 = (CW - 4) / 2; const kpis2 = [{ val: n ? Math.round(abCount / n * 100) + '%' : '—', lbl: '% CLASSE A + B', sub: 'bonne performance' }, { val: n ? Math.round(fgCount / n * 100) + '%' : '—', lbl: '% PASSOIRES (F + G)', sub: 'logements energivores' },]; kpis2.forEach((k, i) => { const kx = ML + i * (kW2 + 4); doc.setFillColor(238, 248, 253); doc.setDrawColor(180, 215, 235); doc.setLineWidth(0.3); doc.roundedRect(kx, y, kW2, 14, 2, 2, 'FD'); doc.setTextColor(0, 150, 190); doc.setFontSize(15); doc.setFont('helvetica', 'bold'); doc.text(k.val, kx + kW2 / 2, y + 8, { align: 'center' }); doc.setTextColor(40, 65, 90); doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.text(k.lbl, kx + kW2 / 2, y + 12, { align: 'center' }); }); y += 18; y = secTitle('CARTE - LOCALISATION DES LOGEMENTS', y); doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(80, 105, 125); doc.text('Visualisation des DPEs filtres sur la commune de ' + CITY.label + '. La couleur de chaque marqueur correspond a la classe DPE (A=vert, G=rouge).', ML, y, { maxWidth: CW }); y += 7; doc.setFillColor(240, 248, 255); doc.setDrawColor(185, 215, 235); doc.setLineWidth(0.3); doc.roundedRect(ML, y, CW, 42, 2, 2, 'FD'); const mapCX = ML + CW / 2, mapCY = y + 18; const pts = [[0, -8], [12, 3], [-15, 4], [8, 10], [-8, -3], [3, 12], [-12, -10], [18, -5]]; pts.forEach(([dx, dy], i) => { const k = DPE_LABELS[i % 7]; doc.setFillColor(...DPE_RGB[k]); doc.circle(mapCX + dx * 0.9, mapCY + dy * 0.8, 2.5, 'F'); doc.setTextColor(255, 255, 255); doc.setFontSize(5.5); doc.setFont('helvetica', 'bold'); doc.text(k, mapCX + dx * 0.9, mapCY + dy * 0.8 + 1.5, { align: 'center' }); }); doc.setTextColor(100, 130, 155); doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.text(n.toLocaleString('fr-FR') + ' logements affiches', mapCX, y + 36, { align: 'center' }); const legY = y + 39.5; let legX = ML + 8; DPE_LABELS.forEach(k => { doc.setFillColor(...DPE_RGB[k]); doc.circle(legX, legY, 1.8, 'F'); doc.setTextColor(60, 80, 100); doc.setFontSize(6.5); doc.text(k, legX + 3, legY + 1); legX += 22; }); y += 47; y = secTitle('REPARTITION PAR ETIQUETTE DPE', y); const maxDpe = Math.max(...Object.values(dpeCounts), 1); const barW = CW - 38; DPE_LABELS.forEach(k => { const cnt = dpeCounts[k], pct = n ? (cnt / n * 100).toFixed(1) : '0.0'; const fill = Math.max(1, Math.round(cnt / maxDpe * barW)); doc.setFillColor(...DPE_RGB[k]); doc.circle(ML + 3, y + 3, 2.8, 'F'); doc.setTextColor(255, 255, 255); doc.setFontSize(6); doc.setFont('helvetica', 'bold'); doc.text(k, ML + 3, y + 4.2, { align: 'center' }); doc.setTextColor(50, 70, 90); doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.text('(' + pct + '%)', ML + 9, y + 4); doc.setFillColor(228, 240, 250); doc.roundedRect(ML + 28, y + 0.5, barW, 5.5, 1, 1, 'F'); if (cnt > 0) { doc.setFillColor(...DPE_RGB[k]); doc.roundedRect(ML + 28, y + 0.5, fill, 5.5, 1, 1, 'F'); } doc.setTextColor(100, 130, 155); doc.setFontSize(7); doc.text(cnt.toLocaleString('fr-FR'), ML + 28 + barW + 2, y + 4.5); y += 7.5; }); drawFooter(1); doc.addPage(); drawHeader(); y = MT + 3; y = secTitle('REPARTITION PAR ETIQUETTE GES', y); const maxGes = Math.max(...Object.values(gesCounts), 1); DPE_LABELS.forEach(k => { const cnt = gesCounts[k], pct = n ? (cnt / n * 100).toFixed(1) : '0.0'; const fill = Math.max(1, Math.round(cnt / maxGes * barW)); doc.setFillColor(...DPE_RGB[k]); doc.circle(ML + 3, y + 3, 2.8, 'F'); doc.setTextColor(255, 255, 255); doc.setFontSize(6); doc.setFont('helvetica', 'bold'); doc.text(k, ML + 3, y + 4.2, { align: 'center' }); doc.setTextColor(50, 70, 90); doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.text('(' + pct + '%)', ML + 9, y + 4); doc.setFillColor(228, 240, 250); doc.roundedRect(ML + 28, y + 0.5, barW, 5.5, 1, 1, 'F'); if (cnt > 0) { doc.setFillColor(...DPE_RGB[k]); doc.roundedRect(ML + 28, y + 0.5, fill, 5.5, 1, 1, 'F'); } doc.setTextColor(100, 130, 155); doc.setFontSize(7); doc.text(cnt.toLocaleString('fr-FR'), ML + 28 + barW + 2, y + 4.5); y += 7.5; }); y += 5; const colW = (CW - 6) / 2; let y1 = y, y2 = y; doc.setFillColor(...C_ACC); doc.rect(ML, y1, 3, 6, 'F'); doc.setTextColor(...C_BG); doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.text('ENERGIE PRINCIPALE DE CHAUFFAGE', ML + 5, y1 + 4.5); doc.setDrawColor(200, 225, 240); doc.setLineWidth(0.2); doc.line(ML + 5, y1 + 6.5, ML + colW, y1 + 6.5); y1 += 10; const hMax = heatSorted.length ? heatSorted[0][1] : 1; heatSorted.forEach(([name, cnt]) => { y1 = barRow(name, cnt, n, hMax, ML, y1, colW, [0, 119, 168]); }); const cx2 = ML + colW + 6; doc.setFillColor(...C_ACC); doc.rect(cx2, y2, 3, 6, 'F'); doc.setTextColor(...C_BG); doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.text('PERIODE DE CONSTRUCTION', cx2 + 5, y2 + 4.5); doc.setDrawColor(200, 225, 240); doc.setLineWidth(0.2); doc.line(cx2 + 5, y2 + 6.5, cx2 + colW, y2 + 6.5); y2 += 10; const perFiltered = PERIODE_ORDER.filter(p => perCounts[p]); const perMax = perFiltered.length ? Math.max(...perFiltered.map(p => perCounts[p])) : 1; perFiltered.forEach(p => { y2 = barRow(p, perCounts[p], n, perMax, cx2, y2, colW, [0, 77, 108]); }); y = Math.max(y1, y2) + 8; y = secTitle('SYNTHESE DPE PAR TYPE DE BATIMENT', y); doc.setFontSize(7); doc.setFont('helvetica', 'italic'); doc.setTextColor(90, 115, 135); doc.text('Distribution des logements filtres par classe DPE et type de batiment. Donnees extraites de la base ADEME DPE logements existants.', ML, y, { maxWidth: CW }); y += 5; const totAppt = FILT.filter(d => d.type === 'appartement').length; const totMais = FILT.filter(d => d.type === 'maison').length; const totImm = FILT.filter(d => d.type === 'immeuble').length; const tableBody = DPE_LABELS.map(k => { const r = crossData[k]; return [k, r.appartement.toLocaleString('fr-FR'), r.maison.toLocaleString('fr-FR'), r.immeuble.toLocaleString('fr-FR'), r.total.toLocaleString('fr-FR'), n ? (r.total / n * 100).toFixed(1) + '%' : '0%']; }); tableBody.push(['Total', totAppt.toLocaleString('fr-FR'), totMais.toLocaleString('fr-FR'), totImm.toLocaleString('fr-FR'), n.toLocaleString('fr-FR'), '100 %']); doc.autoTable({ startY: y, margin: { left: ML, right: MR }, head: [['Classe DPE', 'Appartements', 'Maisons', 'Immeubles', 'Total', '% du total']], body: tableBody, styles: { fontSize: 7.5, cellPadding: 2.5, halign: 'center' }, headStyles: { fillColor: C_BG, textColor: 255, fontStyle: 'bold', fontSize: 7.5 }, alternateRowStyles: { fillColor: [246, 251, 255] }, tableLineColor: [200, 220, 235], tableLineWidth: 0.2, didDrawCell: data => { if (data.section === 'body' && data.column.index === 0 && data.row.index < 7) { const k = DPE_LABELS[data.row.index]; doc.setFillColor(...DPE_RGB[k]); doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F'); doc.setTextColor(255, 255, 255); doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.text(k, data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height / 2 + 1.5, { align: 'center' }); } if (data.section === 'body' && data.row.index === 7) { doc.setFillColor(225, 240, 250); doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F'); doc.setTextColor(13, 27, 42); doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.text(String(data.cell.raw), data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height / 2 + 1.5, { align: 'center' }); } }, }); drawFooter(2); doc.addPage(); drawHeader(); y = MT + 3; y = secTitle('SOURCES ET MENTIONS LEGALES', y); doc.setFillColor(240, 248, 253); doc.setDrawColor(185, 215, 235); doc.setLineWidth(0.2); doc.roundedRect(ML, y, CW, 48, 2, 2, 'FD'); doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(50, 75, 100); const legalText = 'Donnees issues de la base ADEME « DPE Logements existants » (dataset dpe03existant), disponible sur data.ademe.fr sous licence Etalab 2.0. Les diagnostics de performance energetique (DPE) ont ete realises par des diagnostiqueurs certifies conformement a la reglementation francaise. Ce rapport a ete genere automatiquement par l\'application EnerMap a partir des donnees disponibles au ' + dateStr + '. Les valeurs affichees correspondent aux logements correspondant aux filtres selectionnes et ne constituent pas une analyse exhaustive.'; const lines = doc.splitTextToSize(legalText, CW - 10); doc.text(lines, ML + 5, y + 8); y += 56; y = secTitle('RAPPEL DES PARAMETRES DE GENERATION', y); doc.autoTable({ startY: y, margin: { left: ML, right: MR }, head: [['Parametre', 'Valeur']], body: [...filterRows, ['Ville', CITY.label], ['Logements filtres / total', n.toLocaleString('fr-FR') + ' / ' + ALL.length.toLocaleString('fr-FR')], ['Date de generation', dateStr + ' a ' + timeStr],], styles: { fontSize: 7.5, cellPadding: 2.5 }, headStyles: { fillColor: C_BG, textColor: 255, fontStyle: 'bold' }, columnStyles: { 0: { fontStyle: 'bold', fillColor: [238, 245, 252], textColor: [13, 27, 42], cellWidth: 52 }, 1: { textColor: [50, 70, 90] } }, alternateRowStyles: { fillColor: [246, 251, 255] }, theme: 'grid', tableLineColor: [200, 220, 235], tableLineWidth: 0.2, }); drawFooter(3); const filename = 'EnerMap_Rapport_' + CITY.label + '_' + dateStr.replace(/\ doc.save(filename); } initChips(); streamDPE(); </script>
-</body>
 
+<!-- SPLASH -->
+<div class="splash" id="splash">
+  <div class="splash-logo">Ener<span>Map</span></div>
+  <div class="splash-sub">Chargement des données ADEME — Grenoble…</div>
+  <div class="splash-spin"></div>
+</div>
+
+<!-- PROGRESS BAR -->
+<div class="prog-wrap hidden" id="progWrap">
+  <div class="prog-bar-bg"><div class="prog-bar-fill" id="progFill" style="width:0%"></div></div>
+  <div class="prog-label" id="progLabel">Chargement…</div>
+</div>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    <div>
+      <div class="logo-text">EnerMap <span>Anarouz</span></div>
+      <div class="logo-sub">PERFORMANCE ÉNERGÉTIQUE</div>
+    </div>
+  </div>
+  <div class="hdiv"></div>
+  <div class="search-wrap">
+    <div class="search">
+      <svg width="13" height="13" fill="none" stroke="#8BACC8" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="addrSearch" placeholder="Rechercher une adresse…" autocomplete="off">
+    </div>
+    <div class="suggestions" id="suggestions"></div>
+  </div>
+  <div class="city-selector" id="citySelector">
+    <button class="city-btn active" data-city="grenoble" onclick="switchCity('grenoble')">
+      📍 Grenoble<span class="city-loading"></span>
+    </button>
+    <button class="city-btn" data-city="lyon" onclick="switchCity('lyon')">
+      📍 Lyon<span class="city-loading"></span>
+    </button>
+  </div>
+  <div class="hbtns">
+    <button class="btn btn-o" onclick="exportCSV()">⬇ Exporter</button>
+    <button class="btn btn-p" onclick="generateReport()">📊 Rapport PDF</button>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- LEFT SIDEBAR: FILTERS -->
+  <aside class="sidebar">
+
+    <div class="fcard">
+      <div class="flabel">Étiquette DPE</div>
+      <div class="dpe-grid" id="dpeChips"></div>
+    </div>
+
+    <div class="fcard">
+      <div class="flabel">Étiquette GES</div>
+      <div class="dpe-grid" id="gesChips"></div>
+    </div>
+
+    <div class="fcard">
+      <div class="flabel">Surface habitable (m²)</div>
+      <div class="range-row">
+        <span style="font-size:9px;color:var(--txt2)">Min</span>
+        <input type="range" id="surfMin" min="0" max="500" value="0" oninput="applyFilters()">
+        <span class="range-val" id="surfMinVal">0</span>
+      </div>
+      <div class="range-row">
+        <span style="font-size:9px;color:var(--txt2)">Max</span>
+        <input type="range" id="surfMax" min="0" max="500" value="500" oninput="applyFilters()">
+        <span class="range-val" id="surfMaxVal">500</span>
+      </div>
+    </div>
+
+    <div class="fcard">
+      <div class="flabel">Période de construction</div>
+      <select class="sel" id="periodeFilter" onchange="applyFilters()">
+        <option value="">Toutes</option>
+        <option value="avant 1948">Avant 1948</option>
+        <option value="1948-1974">1948–1974</option>
+        <option value="1975-1977">1975–1977</option>
+        <option value="1978-1982">1978–1982</option>
+        <option value="1983-1988">1983–1988</option>
+        <option value="1989-2000">1989–2000</option>
+        <option value="2001-2005">2001–2005</option>
+        <option value="2006-2012">2006–2012</option>
+        <option value="2013-2021">2013–2021</option>
+        <option value="2022 et après">Depuis 2022</option>
+      </select>
+    </div>
+
+    <div class="fcard">
+      <div class="flabel">Type de bâtiment</div>
+      <select class="sel" id="typeFilter" onchange="applyFilters()">
+        <option value="">Tous</option>
+        <option value="maison">Maison</option>
+        <option value="appartement">Appartement</option>
+        <option value="immeuble">Immeuble</option>
+      </select>
+    </div>
+
+    <div class="fcard">
+      <div class="flabel">Énergie de chauffage</div>
+      <select class="sel" id="heatFilter" onchange="applyFilters()">
+        <option value="">Toutes</option>
+      </select>
+    </div>
+
+    <div class="fcard">
+      <div class="toggle-row">
+        <span class="flabel" style="margin-bottom:0">Mode cluster</span>
+        <label class="toggle">
+          <input type="checkbox" id="clusterToggle" checked onchange="toggleCluster(this.checked)">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+    </div>
+
+    <button class="btn btn-o" style="width:100%;margin-top:4px" onclick="resetFilters()">↺ Réinitialiser filtres</button>
+  </aside>
+
+  <!-- CENTER: MAP + BOTTOM STRIP -->
+  <div class="center-col">
+
+    <div class="map-wrap" id="mapWrap">
+      <div id="map"></div>
+
+      <!-- Badge haut droite -->
+      <div class="map-badge">
+        <strong id="mapCount">0</strong> dans la vue
+        <span id="mapTotal" style="color:var(--txt2)"></span>
+        &nbsp;·&nbsp;
+        <span style="cursor:pointer;color:var(--accent)" onclick="zoomToExtent()" title="Zoom sur l'étendue">⊞ Tout voir</span>
+      </div>
+
+      <!-- Boutons bas gauche -->
+      <div class="map-controls">
+        <div class="map-ctrl-btn" onclick="map.zoomIn()" title="Zoom +">+</div>
+        <div class="map-ctrl-btn" onclick="map.zoomOut()" title="Zoom −">−</div>
+        <div class="map-ctrl-sep"></div>
+        <div class="map-ctrl-btn" id="fsBtn" onclick="toggleFullscreen()" title="Plein écran">⛶</div>
+        <div class="map-ctrl-sep"></div>
+        <div class="map-ctrl-btn" id="bmapBtn" onclick="toggleBasemapPanel()" title="Fonds de carte">🗺</div>
+      </div>
+
+      <!-- Panneau fonds de carte -->
+      <div class="basemap-panel" id="basemapPanel"></div>
+    </div>
+
+    <!-- BOTTOM STRIP: 4 indicateurs -->
+    <div class="bottom-strip">
+
+      <!-- 1. Périodes de construction -->
+      <div class="bstrip-panel">
+        <div class="bstrip-title">Période de construction</div>
+        <div class="per-list" id="perList"></div>
+      </div>
+      <div class="bstrip-div"></div>
+
+      <!-- 2. Types de bâtiment -->
+      <div class="bstrip-panel">
+        <div class="bstrip-title">Types de bâtiment</div>
+        <div class="type-pills" id="typePills"></div>
+      </div>
+      <div class="bstrip-div"></div>
+
+      <!-- 3. CO₂ moyen par classe DPE -->
+      <div class="bstrip-panel">
+        <div class="bstrip-title">CO₂ moy. par classe (kg/m²)</div>
+        <div class="co2-bars" id="co2Bars"></div>
+      </div>
+      <div class="bstrip-div"></div>
+
+      <!-- 4. Répartition DPE synthèse -->
+      <div class="bstrip-panel">
+        <div class="bstrip-title">Score DPE global</div>
+        <div class="score-ring-wrap">
+          <div class="score-ring">
+            <svg width="64" height="64" viewBox="0 0 64 64">
+              <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="8"/>
+              <circle id="scoreArc" cx="32" cy="32" r="26" fill="none" stroke="#F3C010" stroke-width="8"
+                stroke-dasharray="0 163.4" stroke-linecap="round" style="transition:stroke-dasharray .6s,stroke .4s"/>
+            </svg>
+            <div class="score-ring-val" id="scoreVal">—</div>
+          </div>
+          <div class="score-legend" id="scoreLegend"></div>
+        </div>
+      </div>
+
+    </div><!-- /bottom-strip -->
+
+  </div><!-- /center-col -->
+
+  <!-- RIGHT PANEL: KPIs + CHARTS -->
+  <aside class="rpanel">
+
+    <div class="kpi-grid">
+      <div class="kpi kpi-wide">
+        <div class="kpi-val" id="kpiTotal">—</div>
+        <div class="kpi-lbl">LOGEMENTS FILTRÉS</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-val" id="kpiAvgCo2">—</div>
+        <div class="kpi-lbl">CO₂ MOY. kg/m²</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-val" id="kpiAvgSurf">—</div>
+        <div class="kpi-lbl">SURFACE MOY. m²</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-val" id="kpiDpeA">—</div>
+        <div class="kpi-lbl">% CLASSE A+B</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-val" id="kpiDpeEFG">—</div>
+        <div class="kpi-lbl">% PASSOIRES (F+G)</div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">Répartition DPE</div>
+      <div class="bar-chart" id="dpeChart"></div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">Énergie de chauffage</div>
+      <div class="heat-list" id="heatChart"></div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">Répartition GES</div>
+      <div class="bar-chart" id="gesChart"></div>
+    </div>
+
+    <div class="chart-wrap" style="font-size:9px;color:var(--txt2);line-height:1.6">
+      Source : ADEME — DPE Logements existants<br>
+      Licence Etalab 2.0 · Mise à jour en temps réel
+    </div>
+
+  </aside>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script>
+// ─────────────────────────────────────────────────────────────
+// CONFIG
+// ─────────────────────────────────────────────────────────────
+const API_BASE = 'https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant';
+
+// ── Config villes ──
+const CITIES = {
+  grenoble: {
+    label:   'Grenoble',
+    filter:  'code_insee_ban:"38185"',   // filtre API
+    center:  [45.188, 5.724],
+    zoom:    13,
+    viewbox: '5.65,45.25,5.83,45.10',
+    bbox:    { latMin: 45.10, latMax: 45.26, lngMin: 5.60, lngMax: 5.84 },
+  },
+  lyon: {
+    label:   'Lyon',
+    filter:  'nom_commune_ban:"Lyon"',   // arrondissements → code INSEE varies
+    center:  [45.748, 4.847],
+    zoom:    13,
+    viewbox: '4.72,45.83,4.98,45.68',
+    bbox:    { latMin: 45.68, latMax: 45.83, lngMin: 4.72, lngMax: 4.98 },
+  },
+};
+
+let currentCity = 'grenoble';   // ville active
+
+const DPE_FIELDS = [
+  '_geopoint',
+  'adresse_ban','adresse_brut','etiquette_dpe','etiquette_ges',
+  'surface_habitable_logement','type_energie_principale_chauffage',
+  'emission_ges_5_usages_par_m2','periode_construction',
+  'date_etablissement_dpe','type_batiment','code_postal_ban','numero_dpe'
+].join(',');
+
+const DPE_COLORS = {A:'#1B7340',B:'#27AE60',C:'#82C341',D:'#F3C010',E:'#E67E22',F:'#E74C3C',G:'#8E1010'};
+const DPE_LABELS = ['A','B','C','D','E','F','G'];
+
+// ─────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────
+let ALL   = [];   // all loaded records (grows as pages arrive)
+let FILT  = [];   // currently filtered records
+let VIEW  = [];   // FILT intersected with map viewport
+let TOTAL_API = null;   // total from API response
+let streaming = true;   // true while pages still loading
+
+// Active filter state
+let activeDPE = new Set(['A','B','C','D','E','F','G']);
+let activeGES = new Set(['A','B','C','D','E','F','G']);
+
+// ─────────────────────────────────────────────────────────────
+// MAP INIT
+// ─────────────────────────────────────────────────────────────
+const map = L.map('map', {
+  center: [45.188, 5.724],
+  zoom: 13,
+  zoomControl: false,   // boutons zoom custom en bas à gauche
+  preferCanvas: true
+});
+
+// Dark mode filter via CSS (uniquement pour OSM standard)
+const styleEl = document.createElement('style');
+styleEl.textContent = `.osm-dark{filter:brightness(.82) saturate(.65) hue-rotate(180deg) invert(1) hue-rotate(180deg)}`;
+document.head.appendChild(styleEl);
+
+// ─── FONDS DE CARTE ──────────────────────────────────────────────────────────
+// Tuile de référence Grenoble centre : z=12, x=2113, y=1469
+const BASEMAPS = [
+  {
+    id:      'osm',
+    name:    'OSM Standard',
+    url:     'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    opts:    { attribution:'© OpenStreetMap', maxZoom:19, className:'osm-dark' },
+    thumb:   'https://tile.openstreetmap.org/12/2113/1469.png',
+  },
+  {
+    id:      'carto-dark',
+    name:    'Carto Dark',
+    url:     'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    opts:    { attribution:'© CartoDB', maxZoom:19, subdomains:'abcd' },
+    thumb:   'https://a.basemaps.cartocdn.com/dark_all/12/2113/1469.png',
+  },
+  {
+    id:      'carto-light',
+    name:    'Carto Clair',
+    url:     'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    opts:    { attribution:'© CartoDB', maxZoom:19, subdomains:'abcd' },
+    thumb:   'https://a.basemaps.cartocdn.com/light_all/12/2113/1469.png',
+  },
+  {
+    id:      'topo',
+    name:    'Topo',
+    url:     'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+    opts:    { attribution:'© OpenTopoMap', maxZoom:17 },
+    thumb:   'https://a.tile.opentopomap.org/12/2113/1469.png',
+  },
+  {
+    id:      'satellite',
+    name:    'Satellite',
+    url:     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    opts:    { attribution:'© Esri', maxZoom:19 },
+    thumb:   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/12/1469/2113',
+  },
+  {
+    id:      'esri-topo',
+    name:    'Esri Topo',
+    url:     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    opts:    { attribution:'© Esri', maxZoom:19 },
+    thumb:   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/12/1469/2113',
+  },
+];
+
+let currentTileLayer = null;
+let currentBasemapId = 'osm';
+
+// Initialise le fond de carte OSM par défaut
+currentTileLayer = L.tileLayer(BASEMAPS[0].url, BASEMAPS[0].opts).addTo(map);
+
+// Construit les miniatures du panneau
+function buildBasemapPanel() {
+  const panel = document.getElementById('basemapPanel');
+  panel.innerHTML = '<div class="basemap-panel-title">Fond de carte</div>';
+  BASEMAPS.forEach(bm => {
+    const div = document.createElement('div');
+    div.className = 'bmap-thumb' + (bm.id === currentBasemapId ? ' active' : '');
+    div.dataset.id = bm.id;
+    div.title = bm.name;
+    div.onclick = () => switchBasemap(bm.id);
+    const img = document.createElement('img');
+    img.className = 'bmap-img';
+    img.src = bm.thumb;
+    img.alt = bm.name;
+    img.loading = 'lazy';
+    img.onerror = () => { img.style.background = 'var(--border)'; img.src = ''; };
+    const lbl = document.createElement('div');
+    lbl.className = 'bmap-name';
+    lbl.textContent = bm.name;
+    div.appendChild(img);
+    div.appendChild(lbl);
+    panel.appendChild(div);
+  });
+}
+
+function switchBasemap(id) {
+  if (id === currentBasemapId) { toggleBasemapPanel(false); return; }
+  const bm = BASEMAPS.find(b => b.id === id);
+  if (!bm) return;
+  if (currentTileLayer) map.removeLayer(currentTileLayer);
+  currentTileLayer = L.tileLayer(bm.url, bm.opts).addTo(map);
+  currentTileLayer.bringToBack();
+  currentBasemapId = id;
+  document.querySelectorAll('.bmap-thumb').forEach(el =>
+    el.classList.toggle('active', el.dataset.id === id)
+  );
+  toggleBasemapPanel(false);
+}
+
+function toggleBasemapPanel(force) {
+  const panel  = document.getElementById('basemapPanel');
+  const btn    = document.getElementById('bmapBtn');
+  const isOpen = panel.classList.contains('open');
+  const open   = force !== undefined ? force : !isOpen;
+  panel.classList.toggle('open', open);
+  btn.classList.toggle('active', open);
+}
+
+// Ferme le panneau si clic en dehors
+document.addEventListener('click', e => {
+  if (!e.target.closest('#basemapPanel') && !e.target.closest('#bmapBtn')) {
+    toggleBasemapPanel(false);
+  }
+});
+
+// Construit le panneau au démarrage
+buildBasemapPanel();
+
+let clusterMode = true;  // cluster ON par défaut
+
+function makeClusterGroup() {
+  return L.markerClusterGroup({
+    chunkedLoading: true,
+    chunkInterval: 200,
+    maxClusterRadius: 60,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+  });
+}
+
+let clusters = makeClusterGroup();
+map.addLayer(clusters);
+
+function toggleCluster(enabled) {
+  clusterMode = enabled;
+  map.removeLayer(clusters);
+  clusters = clusterMode ? makeClusterGroup() : L.layerGroup();
+  map.addLayer(clusters);
+  addMarkersFromBatch(FILT);
+}
+
+// ── Mise à jour widgets sur déplacement/zoom carte ──
+let _viewDebounce = null;
+map.on('moveend zoomend', () => {
+  clearTimeout(_viewDebounce);
+  _viewDebounce = setTimeout(() => {
+    if (FILT.length > 0) updateAll();
+  }, 120);
+});
+
+// ─────────────────────────────────────────────────────────────
+// PARSE RAW API RECORD
+// ─────────────────────────────────────────────────────────────
+function parseRecord(d) {
+  if (!d._geopoint) return null;
+  const parts = d._geopoint.split(',');
+  const lat = parseFloat(parts[0]);
+  const lng = parseFloat(parts[1]);
+  if (isNaN(lat) || isNaN(lng)) return null;
+  // Rejette les coordonnées hors bounding box de la ville courante
+  const bbox = CITIES[currentCity].bbox;
+  if (lat < bbox.latMin || lat > bbox.latMax || lng < bbox.lngMin || lng > bbox.lngMax) return null;
+  return {
+    lat, lng,
+    dpe:  (d.etiquette_dpe  || '').toUpperCase().trim(),
+    ges:  (d.etiquette_ges  || '').toUpperCase().trim(),
+    surf: d.surface_habitable_logement ? Math.round(d.surface_habitable_logement) : null,
+    heat: d.type_energie_principale_chauffage || null,
+    co2:  d.emission_ges_5_usages_par_m2 != null ? Math.round(d.emission_ges_5_usages_par_m2) : null,
+    per:  d.periode_construction || null,
+    date: (d.date_etablissement_dpe || '').slice(0, 7),
+    type: d.type_batiment || null,
+    addr: d.adresse_ban || d.adresse_brut || null,
+    cp:   d.code_postal_ban || null,
+    id:   d.numero_dpe || null,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
+// FILTER LOGIC
+// ─────────────────────────────────────────────────────────────
+function applyFiltersFn(records) {
+  const surfMin = +document.getElementById('surfMin').value;
+  const surfMax = +document.getElementById('surfMax').value;
+  const periode = document.getElementById('periodeFilter').value;
+  const typeBat = document.getElementById('typeFilter').value.toLowerCase();
+  const heat    = document.getElementById('heatFilter').value;
+
+  return records.filter(d => {
+    if (!activeDPE.has(d.dpe) && d.dpe) return false;
+    if (!activeGES.has(d.ges) && d.ges) return false;
+    if (d.surf !== null && d.surf < surfMin) return false;
+    if (d.surf !== null && surfMax < 500 && d.surf > surfMax) return false;
+    if (periode && d.per && !d.per.toLowerCase().includes(periode.toLowerCase())) return false;
+    if (typeBat && d.type && !d.type.toLowerCase().includes(typeBat)) return false;
+    if (heat && d.heat && d.heat !== heat) return false;
+    return true;
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// MARKER CREATION
+// ─────────────────────────────────────────────────────────────
+function makeMarker(d) {
+  const color = DPE_COLORS[d.dpe] || '#555';
+  const m = L.circleMarker([d.lat, d.lng], {
+    radius: 6,
+    fillColor: color,
+    fillOpacity: 0.85,
+    color: '#000',
+    weight: 0.5,
+  });
+  m.bindPopup(() => {
+    const dpeColor = DPE_COLORS[d.dpe] || '#555';
+    return `
+      <div style="min-width:180px">
+        <div class="pop-dpe" style="background:${dpeColor}">${d.dpe || '?'}</div>
+        <div class="pop-row">${d.addr || 'Adresse inconnue'}</div>
+        <hr style="border-color:rgba(255,255,255,.1);margin:6px 0">
+        <div class="pop-row">GES : <strong>${d.ges || '—'}</strong></div>
+        <div class="pop-row">Surface : <strong>${d.surf ? d.surf + ' m²' : '—'}</strong></div>
+        <div class="pop-row">CO₂ : <strong>${d.co2 != null ? d.co2 + ' kg/m²' : '—'}</strong></div>
+        <div class="pop-row">Énergie : <strong>${d.heat || '—'}</strong></div>
+        <div class="pop-row">Période : <strong>${d.per || '—'}</strong></div>
+        <div class="pop-row">Type : <strong>${d.type || '—'}</strong></div>
+        <div class="pop-row" style="margin-top:6px;font-size:9px;color:var(--txt2)">DPE n° ${d.id || '—'}</div>
+      </div>`;
+  }, { maxWidth: 240 });
+  return m;
+}
+
+// Add markers batch WITHOUT clearing existing ones (used during streaming)
+function addMarkersFromBatch(records) {
+  if (clusterMode) {
+    clusters.addLayers(records.map(makeMarker));
+  } else {
+    records.forEach(d => clusters.addLayer(makeMarker(d)));
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// VIEWPORT FILTER
+// ─────────────────────────────────────────────────────────────
+function computeView() {
+  const bounds = map.getBounds();
+  VIEW = FILT.filter(d => bounds.contains([d.lat, d.lng]));
+}
+
+// ─────────────────────────────────────────────────────────────
+// WIDGET UPDATES
+// ─────────────────────────────────────────────────────────────
+function updateAll() {
+  computeView();
+  const n    = VIEW.length;
+  const nAll = FILT.length;
+
+  document.getElementById('kpiTotal').textContent = n.toLocaleString('fr-FR');
+  document.getElementById('mapCount').textContent = n.toLocaleString('fr-FR');
+
+  // Badge "X dans la vue / Y filtrés"
+  const mapTotal = document.getElementById('mapTotal');
+  if (mapTotal) {
+    mapTotal.textContent = n < nAll ? ' / ' + nAll.toLocaleString('fr-FR') + ' filtrés' : '';
+  }
+
+  // Sous-titre KPI : indique si vue partielle
+  const kpiLbl = document.querySelector('#kpiTotal + .kpi-lbl') || document.querySelector('.kpi-wide .kpi-lbl');
+  if (kpiLbl) kpiLbl.textContent = n < nAll ? 'DANS LA VUE CARTE' : 'LOGEMENTS FILTRÉS';
+
+  const withCo2  = VIEW.filter(d => d.co2  != null);
+  const withSurf = VIEW.filter(d => d.surf != null);
+  const avgCo2   = withCo2.length  ? Math.round(withCo2.reduce((s,d)=>s+d.co2,0)  / withCo2.length)  : null;
+  const avgSurf  = withSurf.length ? Math.round(withSurf.reduce((s,d)=>s+d.surf,0) / withSurf.length) : null;
+
+  document.getElementById('kpiAvgCo2').textContent  = avgCo2  != null ? avgCo2  : '—';
+  document.getElementById('kpiAvgSurf').textContent = avgSurf != null ? avgSurf : '—';
+
+  const abCount = VIEW.filter(d => d.dpe === 'A' || d.dpe === 'B').length;
+  const fgCount = VIEW.filter(d => d.dpe === 'F' || d.dpe === 'G').length;
+  document.getElementById('kpiDpeA').textContent   = n ? Math.round(abCount/n*100) + '%' : '—';
+  document.getElementById('kpiDpeEFG').textContent = n ? Math.round(fgCount/n*100) + '%' : '—';
+
+  updateBarChart('dpeChart', DPE_LABELS, VIEW, d => d.dpe, DPE_COLORS);
+  updateBarChart('gesChart',  DPE_LABELS, VIEW, d => d.ges, DPE_COLORS);
+  updateHeatChart();
+  updateDpeChipCounts();
+  updateBottomStrip();
+}
+
+function updateBarChart(containerId, keys, data, keyFn, colors) {
+  const counts = {};
+  keys.forEach(k => counts[k] = 0);
+  data.forEach(d => { const k = keyFn(d); if (k && counts[k] !== undefined) counts[k]++; });
+  const max = Math.max(...Object.values(counts), 1);
+  const el = document.getElementById(containerId);
+  el.innerHTML = keys.map(k => `
+    <div class="bar-row">
+      <div class="bar-key" style="color:${colors[k]}">${k}</div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${Math.round(counts[k]/max*100)}%;background:${colors[k]}"></div></div>
+      <div class="bar-cnt">${counts[k].toLocaleString('fr-FR')}</div>
+    </div>`).join('');
+}
+
+function updateHeatChart() {
+  const counts = {};
+  VIEW.forEach(d => { if (d.heat) counts[d.heat] = (counts[d.heat]||0)+1; });
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0, 8);
+  const max = sorted.length ? sorted[0][1] : 1;
+  document.getElementById('heatChart').innerHTML = sorted.map(([name, cnt]) => `
+    <div class="heat-item">
+      <div class="heat-name" title="${name}">${name}</div>
+      <div class="heat-bar-bg"><div class="heat-bar-fill" style="width:${Math.round(cnt/max*100)}%"></div></div>
+      <div class="heat-pct">${cnt.toLocaleString('fr-FR')}</div>
+    </div>`).join('');
+}
+
+function updateDpeChipCounts() {
+  document.querySelectorAll('.chip[data-dpe]').forEach(chip => {
+    const key = chip.dataset.dpe;
+    const cnt = VIEW.filter(d => d.dpe === key).length;
+    const el = chip.querySelector('.chip-cnt');
+    if (el) el.textContent = cnt.toLocaleString('fr-FR');
+  });
+  document.querySelectorAll('.chip[data-ges]').forEach(chip => {
+    const key = chip.dataset.ges;
+    const cnt = VIEW.filter(d => d.ges === key).length;
+    const el = chip.querySelector('.chip-cnt');
+    if (el) el.textContent = cnt.toLocaleString('fr-FR');
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// BOTTOM STRIP UPDATES
+// ─────────────────────────────────────────────────────────────
+function updateBottomStrip() {
+  const n = VIEW.length;
+  if (!n) return;
+
+  // ── 1. Périodes de construction ──
+  const PERIODE_ORDER = ['avant 1948','1948-1974','1975-1977','1978-1982','1983-1988','1989-2000','2001-2005','2006-2012','2013-2021','2022 et après'];
+  const perCounts = {};
+  VIEW.forEach(d => { if (d.per) perCounts[d.per] = (perCounts[d.per]||0)+1; });
+  const perSorted = PERIODE_ORDER.filter(p => perCounts[p]).map(p => [p, perCounts[p]]);
+  const perMax = perSorted.length ? Math.max(...perSorted.map(([,c])=>c)) : 1;
+  document.getElementById('perList').innerHTML = perSorted.map(([lbl, cnt]) => `
+    <div class="per-row">
+      <div class="per-lbl" title="${lbl}">${lbl}</div>
+      <div class="per-bar-bg"><div class="per-bar-fill" style="width:${Math.round(cnt/perMax*100)}%"></div></div>
+      <div class="per-cnt">${cnt.toLocaleString('fr-FR')}</div>
+    </div>`).join('');
+
+  // ── 2. Types de bâtiment ──
+  const TYPE_ICONS = { maison:'🏠', appartement:'🏢', immeuble:'🏗️' };
+  const typeCounts = {};
+  VIEW.forEach(d => { if (d.type) typeCounts[d.type] = (typeCounts[d.type]||0)+1; });
+  const typeSorted = Object.entries(typeCounts).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  document.getElementById('typePills').innerHTML = typeSorted.map(([type, cnt]) => `
+    <div class="type-pill">
+      <div class="type-icon">${TYPE_ICONS[type]||'🏠'}</div>
+      <div class="type-info">
+        <div class="type-name">${type.charAt(0).toUpperCase()+type.slice(1)}</div>
+        <div class="type-sub">${cnt.toLocaleString('fr-FR')} logements</div>
+      </div>
+      <div class="type-pct">${Math.round(cnt/n*100)}%</div>
+    </div>`).join('');
+
+  // ── 3. CO₂ moyen par classe DPE ──
+  const co2ByDpe = {};
+  DPE_LABELS.forEach(k => co2ByDpe[k] = { sum:0, count:0 });
+  VIEW.forEach(d => { if (d.dpe && d.co2 != null && co2ByDpe[d.dpe]) { co2ByDpe[d.dpe].sum += d.co2; co2ByDpe[d.dpe].count++; } });
+  const co2Avgs = DPE_LABELS.map(k => ({ k, avg: co2ByDpe[k].count ? Math.round(co2ByDpe[k].sum / co2ByDpe[k].count) : 0 }));
+  const co2Max = Math.max(...co2Avgs.map(d=>d.avg), 1);
+  const barH = 76; // px height available
+  document.getElementById('co2Bars').innerHTML = co2Avgs.map(({k, avg}) => `
+    <div class="co2-col">
+      <div class="co2-bar" style="height:${avg ? Math.max(4, Math.round(avg/co2Max*barH))+'px' : '4px'};background:${DPE_COLORS[k]}"></div>
+      <div class="co2-lbl" style="color:${DPE_COLORS[k]};font-weight:700">${k}</div>
+      <div class="co2-lbl">${avg||'—'}</div>
+    </div>`).join('');
+
+  // ── 4. Score DPE global (anneau) ──
+  // Score : A=1 … G=7, moyenne → position arc
+  const DPE_SCORE = {A:1,B:2,C:3,D:4,E:5,F:6,G:7};
+  const scorable = VIEW.filter(d => d.dpe && DPE_SCORE[d.dpe]);
+  const avgScore = scorable.length ? scorable.reduce((s,d)=>s+DPE_SCORE[d.dpe],0)/scorable.length : null;
+  const scoreLabel = avgScore ? DPE_LABELS[Math.round(avgScore)-1] || 'D' : '—';
+  const scoreColor = DPE_COLORS[scoreLabel] || '#555';
+  const CIRCUM = 2 * Math.PI * 26; // ~163.4
+  const arc = avgScore ? Math.round((avgScore-1)/6 * CIRCUM * 10)/10 : 0;
+  document.getElementById('scoreArc').setAttribute('stroke-dasharray', `${arc} ${CIRCUM}`);
+  document.getElementById('scoreArc').setAttribute('stroke', scoreColor);
+  document.getElementById('scoreVal').textContent = scoreLabel;
+  document.getElementById('scoreVal').style.color = scoreColor;
+  // Légende top 3 classes
+  const dpeCounts2 = {};
+  DPE_LABELS.forEach(k => dpeCounts2[k]=0);
+  VIEW.forEach(d=>{ if(d.dpe) dpeCounts2[d.dpe]++; });
+  const top3 = DPE_LABELS.filter(k=>dpeCounts2[k]>0).sort((a,b)=>dpeCounts2[b]-dpeCounts2[a]).slice(0,4);
+  document.getElementById('scoreLegend').innerHTML = top3.map(k => `
+    <div class="score-leg-row">
+      <div class="score-leg-dot" style="background:${DPE_COLORS[k]}"></div>
+      <span style="color:${DPE_COLORS[k]};font-weight:700">${k}</span>
+      <span style="margin-left:2px">${Math.round(dpeCounts2[k]/n*100)}% · ${dpeCounts2[k].toLocaleString('fr-FR')}</span>
+    </div>`).join('');
+}
+
+// ─────────────────────────────────────────────────────────────
+// FILTER UI INIT
+// ─────────────────────────────────────────────────────────────
+function initChips() {
+  const dpeContainer = document.getElementById('dpeChips');
+  const gesContainer = document.getElementById('gesChips');
+
+  DPE_LABELS.forEach(lbl => {
+    // DPE
+    const chip = document.createElement('div');
+    chip.className = 'chip on';
+    chip.dataset.dpe = lbl;
+    chip.innerHTML = `<div class="chip-dot" style="background:${DPE_COLORS[lbl]}"></div><span class="chip-lbl">${lbl}</span><span class="chip-cnt">—</span>`;
+    chip.addEventListener('click', () => {
+      if (activeDPE.has(lbl)) { activeDPE.delete(lbl); chip.classList.remove('on'); }
+      else { activeDPE.add(lbl); chip.classList.add('on'); }
+      applyFilters();
+    });
+    dpeContainer.appendChild(chip);
+
+    // GES
+    const gchip = document.createElement('div');
+    gchip.className = 'chip on';
+    gchip.dataset.ges = lbl;
+    gchip.innerHTML = `<div class="chip-dot" style="background:${DPE_COLORS[lbl]}"></div><span class="chip-lbl">${lbl}</span><span class="chip-cnt">—</span>`;
+    gchip.addEventListener('click', () => {
+      if (activeGES.has(lbl)) { activeGES.delete(lbl); gchip.classList.remove('on'); }
+      else { activeGES.add(lbl); gchip.classList.add('on'); }
+      applyFilters();
+    });
+    gesContainer.appendChild(gchip);
+  });
+
+  // Range display sync
+  ['surfMin','surfMax'].forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener('input', () => {
+      document.getElementById(id+'Val').textContent = el.value === '500' ? '500+' : el.value;
+    });
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// APPLY FILTERS (user-triggered: full re-render)
+// ─────────────────────────────────────────────────────────────
+function applyFilters() {
+  FILT = applyFiltersFn(ALL);
+  clusters.clearLayers();
+  addMarkersFromBatch(FILT);
+  updateAll();
+}
+
+function resetFilters() {
+  activeDPE = new Set(DPE_LABELS);
+  activeGES = new Set(DPE_LABELS);
+  document.querySelectorAll('.chip').forEach(c => c.classList.add('on'));
+  document.getElementById('surfMin').value = 0;
+  document.getElementById('surfMax').value = 500;
+  document.getElementById('surfMinVal').textContent = '0';
+  document.getElementById('surfMaxVal').textContent = '500+';
+  document.getElementById('periodeFilter').value = '';
+  document.getElementById('typeFilter').value = '';
+  document.getElementById('heatFilter').value = '';
+  applyFilters();
+}
+
+// ─────────────────────────────────────────────────────────────
+// PROGRESS BAR
+// ─────────────────────────────────────────────────────────────
+function updateProgress(loaded, total) {
+  const pct = total ? Math.min(100, Math.round(loaded / total * 100)) : 0;
+  document.getElementById('progFill').style.width = pct + '%';
+  const totalStr = total ? total.toLocaleString('fr-FR') : '…';
+  document.getElementById('progLabel').textContent =
+    `${loaded.toLocaleString('fr-FR')} / ${totalStr} logements chargés (${pct}%)`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// HEAT FILTER: POPULATE SELECT FROM DATA
+// ─────────────────────────────────────────────────────────────
+function refreshHeatSelect() {
+  const counts = {};
+  ALL.forEach(d => { if (d.heat) counts[d.heat] = (counts[d.heat]||0)+1; });
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const sel = document.getElementById('heatFilter');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Toutes</option>';
+  sorted.forEach(([name]) => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    if (name === current) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// SWITCH CITY
+// ─────────────────────────────────────────────────────────────
+let streamAbort = false;  // signal pour stopper le stream en cours
+
+async function switchCity(cityKey) {
+  if (cityKey === currentCity && ALL.length > 0) return;
+
+  // Mise à jour boutons
+  document.querySelectorAll('.city-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.city === cityKey);
+    b.classList.remove('loading');
+  });
+  document.querySelector(`.city-btn[data-city="${cityKey}"]`).classList.add('loading');
+
+  // Reset état
+  streamAbort = true;
+  await new Promise(r => setTimeout(r, 50));  // laisse le stream courant se terminer
+  streamAbort = false;
+  currentCity = cityKey;
+  ALL = []; FILT = []; TOTAL_API = null; streaming = true;
+
+  // Reset filtres
+  activeDPE = new Set(DPE_LABELS);
+  activeGES = new Set(DPE_LABELS);
+  document.querySelectorAll('.chip').forEach(c => c.classList.add('on'));
+  document.getElementById('surfMin').value = 0;
+  document.getElementById('surfMax').value = 500;
+  document.getElementById('surfMinVal').textContent = '0';
+  document.getElementById('surfMaxVal').textContent = '500+';
+  document.getElementById('periodeFilter').value = '';
+  document.getElementById('typeFilter').value = '';
+  document.getElementById('heatFilter').innerHTML = '<option value="">Toutes</option>';
+
+  // Recentre la carte
+  const city = CITIES[cityKey];
+  clusters.clearLayers();
+  map.setView(city.center, city.zoom);
+
+  // Met à jour le viewbox Nominatim
+  nominatimViewbox = city.viewbox;
+
+  // Relance le stream
+  streamDPE();
+}
+
+// ─────────────────────────────────────────────────────────────
+// PROGRESSIVE STREAMING FROM API
+// ─────────────────────────────────────────────────────────────
+async function streamDPE() {
+  const splash  = document.getElementById('splash');
+  const progWrap = document.getElementById('progWrap');
+
+  let afterCursor = null;
+  let page = 0;
+  const cityKey = currentCity;
+
+  try {
+    while (true) {
+      if (streamAbort || currentCity !== cityKey) break;  // ville changée → stop
+      const city = CITIES[cityKey];
+      const url = new URL(`${API_BASE}/lines`);
+      url.searchParams.set('qs',     city.filter);
+      url.searchParams.set('size',   '10000');
+      url.searchParams.set('select', DPE_FIELDS);
+      url.searchParams.set('sort',   '-date_etablissement_dpe');
+      if (afterCursor) url.searchParams.set('after', afterCursor);
+
+      const res = await fetch(url.toString(), {
+        headers: { 'Accept': 'application/json' }
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      if (data.error) throw new Error('API error: ' + data.error);
+
+      if (TOTAL_API === null) TOTAL_API = data.total;
+
+      const records = (data.results || []).map(parseRecord).filter(Boolean);
+
+      // After first page: reveal the map
+      if (page === 0) {
+        splash.classList.add('gone');
+        progWrap.classList.remove('hidden');
+        map.invalidateSize();
+        refreshHeatSelect();
+      }
+
+      ALL = ALL.concat(records);
+
+      // Only add new records that match current filters (don't clear during streaming)
+      const newFiltered = applyFiltersFn(records);
+      addMarkersFromBatch(newFiltered);
+
+      // Update FILT with ALL
+      FILT = applyFiltersFn(ALL);
+      updateAll();
+      updateProgress(ALL.length, TOTAL_API);
+
+      // Refresh heat select periodically
+      if (page === 0 || page % 2 === 0) refreshHeatSelect();
+
+      // Get next cursor
+      afterCursor = data.next
+        ? new URL(data.next).searchParams.get('after')
+        : null;
+      page++;
+
+      if (!afterCursor) break;
+
+      // Rate limit: 150ms between pages
+      await new Promise(r => setTimeout(r, 150));
+    }
+
+    // Done
+    streaming = false;
+    // Retire le spinner du bouton ville actif
+    document.querySelector(`.city-btn[data-city="${cityKey}"]`)?.classList.remove('loading');
+    updateProgress(ALL.length, TOTAL_API);
+    await new Promise(r => setTimeout(r, 2000));
+    progWrap.classList.add('hidden');
+    refreshHeatSelect();
+
+  } catch (err) {
+    console.error('EnerMap stream error:', err);
+    document.getElementById('progLabel').textContent = '⚠ Erreur de chargement: ' + err.message;
+    if (page === 0) {
+      splash.classList.add('gone');
+      progWrap.classList.remove('hidden');
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// EXPORT CSV
+// ─────────────────────────────────────────────────────────────
+function exportCSV() {
+  const headers = ['lat','lng','dpe','ges','surf','co2','heat','per','type','addr','cp','id'];
+  const rows = FILT.map(d =>
+    headers.map(h => {
+      const v = d[h];
+      if (v == null) return '';
+      if (typeof v === 'string' && v.includes(',')) return `"${v}"`;
+      return v;
+    }).join(',')
+  );
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'enermap-grenoble.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─────────────────────────────────────────────────────────────
+// ZOOM TO EXTENT
+// ─────────────────────────────────────────────────────────────
+function zoomToExtent() {
+  const records = FILT.length > 0 ? FILT : ALL;
+  if (records.length === 0) return;
+  const bounds = L.latLngBounds(records.map(d => [d.lat, d.lng]));
+  map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16, animate: true });
+}
+
+// ─────────────────────────────────────────────────────────────
+// ADDRESS SEARCH (Nominatim OSM)
+// ─────────────────────────────────────────────────────────────
+const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
+// Viewbox dynamique — mis à jour par switchCity
+let nominatimViewbox = CITIES[currentCity].viewbox;
+
+let searchTimeout;
+const addrInput   = document.getElementById('addrSearch');
+const suggestions = document.getElementById('suggestions');
+
+addrInput.addEventListener('input', e => {
+  clearTimeout(searchTimeout);
+  const q = e.target.value.trim();
+  if (q.length < 3) { hideSuggestions(); return; }
+  searchTimeout = setTimeout(() => fetchSuggestions(q), 400);
+});
+
+addrInput.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { hideSuggestions(); addrInput.blur(); }
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) hideSuggestions();
+});
+
+async function fetchSuggestions(q) {
+  try {
+    const url = `${NOMINATIM_URL}?format=json&q=${encodeURIComponent(q)}&viewbox=${nominatimViewbox}&bounded=1&limit=6&accept-language=fr`;
+    const res  = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    const data = await res.json();
+    showSuggestions(data);
+  } catch (e) { hideSuggestions(); }
+}
+
+function showSuggestions(results) {
+  if (!results || results.length === 0) { hideSuggestions(); return; }
+  suggestions.innerHTML = results.map(r => {
+    // Raccourcit le display_name : garde les 3 premiers segments
+    const label = r.display_name.split(', ').slice(0, 3).join(', ');
+    return `<div class="sugg-item" data-lat="${r.lat}" data-lon="${r.lon}">${label}</div>`;
+  }).join('');
+  suggestions.querySelectorAll('.sugg-item').forEach(el => {
+    el.addEventListener('click', () => {
+      map.setView([+el.dataset.lat, +el.dataset.lon], 16, { animate: true });
+      addrInput.value = el.textContent;
+      hideSuggestions();
+    });
+  });
+  suggestions.classList.add('open');
+}
+
+function hideSuggestions() {
+  suggestions.classList.remove('open');
+  suggestions.innerHTML = '';
+}
+
+// ─────────────────────────────────────────────────────────────
+// FULLSCREEN CARTE
+// ─────────────────────────────────────────────────────────────
+let _isFullscreen = false;
+
+function toggleFullscreen() {
+  const wrap = document.getElementById('mapWrap');
+  const btn  = document.getElementById('fsBtn');
+  _isFullscreen = !_isFullscreen;
+  wrap.classList.toggle('fullscreen', _isFullscreen);
+  btn.textContent   = _isFullscreen ? '✕' : '⛶';
+  btn.title         = _isFullscreen ? 'Quitter le plein écran' : 'Plein écran';
+  // Leaflet doit recalculer la taille après transition CSS
+  setTimeout(() => map.invalidateSize(), 50);
+}
+
+// Touche Échap pour quitter le plein écran
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && _isFullscreen) toggleFullscreen();
+});
+
+// ─────────────────────────────────────────────────────────────
+// GENERATE PDF REPORT
+// ─────────────────────────────────────────────────────────────
+function generateReport() {
+  if (!window.jspdf) { alert('Bibliothèque PDF non chargée, réessayez dans un instant.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  // ── Constantes mise en page ──
+  const PW = 210, PH = 297, ML = 15, MR = 15, MT = 32, MB = 20;
+  const CW = PW - ML - MR;
+  const CITY = CITIES[currentCity];
+  const now  = new Date();
+  const dateStr = now.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric' });
+  const timeStr = now.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+
+  // ── Couleurs ──
+  const C_BG  = [13,27,42], C_ACC = [0,180,216], C_TXT = [232,244,253], C_TXT2 = [139,172,200];
+  const DPE_RGB = { A:[27,115,64],B:[39,174,96],C:[130,195,65],D:[243,192,16],E:[230,126,34],F:[231,76,60],G:[142,16,16] };
+
+  // ── Helpers ──
+  function drawHeader() {
+    doc.setFillColor(...C_BG);
+    doc.rect(0, 0, PW, 28, 'F');
+    doc.setFillColor(...C_ACC);
+    doc.roundedRect(ML, 7, 13, 13, 2, 2, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text('E', ML+4, 15);
+    doc.setTextColor(...C_TXT);
+    doc.setFontSize(13); doc.setFont('helvetica','bold');
+    doc.text('EnerMap', ML+16, 14);
+    doc.setTextColor(...C_ACC);
+    doc.text('Anarouz', ML+39, 14);
+    doc.setTextColor(...C_TXT2);
+    doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(CITY.label.toUpperCase() + '  ·  ' + dateStr, ML+16, 19);
+    doc.setTextColor(...C_TXT);
+    doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text('RAPPORT DE PERFORMANCE ENERGETIQUE', PW-MR, 16, { align:'right' });
+    doc.setTextColor(0,180,216);
+    doc.setLineWidth(0.5); doc.line(0, 28, PW, 28);
+  }
+
+  function drawFooter(pageNum) {
+    doc.setFillColor(...C_BG);
+    doc.rect(0, PH-16, PW, 16, 'F');
+    doc.setTextColor(...C_TXT2);
+    doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text('Source : ADEME - DPE Logements existants (dpe03existant) - Licence Etalab 2.0 - Genere le ' + dateStr + ' a ' + timeStr, ML, PH-7);
+    doc.setTextColor(...C_ACC);
+    doc.text('Page ' + pageNum, PW-MR, PH-7, { align:'right' });
+  }
+
+  function secTitle(text, y) {
+    doc.setFillColor(...C_ACC);
+    doc.rect(ML, y, 3, 6, 'F');
+    doc.setTextColor(...C_BG);
+    doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    doc.text(text, ML+5, y+4.5);
+    doc.setDrawColor(200,225,240); doc.setLineWidth(0.2);
+    doc.line(ML+5, y+6.5, PW-MR, y+6.5);
+    return y + 10;
+  }
+
+  function barRow(label, cnt, total, maxCnt, x, y, w, color) {
+    const pct  = total ? (cnt/total*100).toFixed(1) : '0.0';
+    const fill = maxCnt ? Math.max(1, Math.round(cnt/maxCnt*(w-28))) : 0;
+    doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(60,80,100);
+    const shortLbl = label.length > 24 ? label.slice(0,22)+'...' : label;
+    doc.text(shortLbl, x, y+3.5);
+    doc.setFillColor(230,240,248);
+    doc.roundedRect(x, y+4.5, w-28, 4, 1, 1, 'F');
+    if (fill > 0) { doc.setFillColor(...color); doc.roundedRect(x, y+4.5, fill, 4, 1, 1, 'F'); }
+    doc.setTextColor(100,130,155);
+    doc.text(pct+'%', x+w-26, y+7.5, { align:'right' });
+    doc.text(cnt.toLocaleString('fr-FR'), x+w, y+7.5, { align:'right' });
+    return y + 11;
+  }
+
+  // ── Calcul données ──
+  const n = FILT.length;
+  const withCo2  = FILT.filter(d=>d.co2!=null);
+  const withSurf = FILT.filter(d=>d.surf!=null);
+  const avgCo2   = withCo2.length  ? Math.round(withCo2.reduce((s,d)=>s+d.co2,0)/withCo2.length)  : null;
+  const avgSurf  = withSurf.length ? Math.round(withSurf.reduce((s,d)=>s+d.surf,0)/withSurf.length) : null;
+  const abCount  = FILT.filter(d=>d.dpe==='A'||d.dpe==='B').length;
+  const fgCount  = FILT.filter(d=>d.dpe==='F'||d.dpe==='G').length;
+
+  const dpeCounts={}, gesCounts={};
+  DPE_LABELS.forEach(k=>{dpeCounts[k]=0; gesCounts[k]=0;});
+  FILT.forEach(d=>{ if(d.dpe) dpeCounts[d.dpe]++; if(d.ges) gesCounts[d.ges]++; });
+
+  const heatCounts={};
+  FILT.forEach(d=>{ if(d.heat) heatCounts[d.heat]=(heatCounts[d.heat]||0)+1; });
+  const heatSorted = Object.entries(heatCounts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+  const PERIODE_ORDER = ['avant 1948','1948-1974','1975-1977','1978-1982','1983-1988','1989-2000','2001-2005','2006-2012','2013-2021','2022 et apres'];
+  const perCounts={};
+  FILT.forEach(d=>{ if(d.per) perCounts[d.per]=(perCounts[d.per]||0)+1; });
+
+  const crossData={};
+  DPE_LABELS.forEach(k=>{ crossData[k]={appartement:0,maison:0,immeuble:0,total:0}; });
+  FILT.forEach(d=>{
+    if(d.dpe && crossData[d.dpe] && d.type) {
+      const t = d.type.toLowerCase();
+      if(crossData[d.dpe][t]!==undefined){ crossData[d.dpe][t]++; crossData[d.dpe].total++; }
+    }
+  });
+
+  // Lecture filtres actifs
+  const surfMinV = document.getElementById('surfMin').value;
+  const surfMaxV = document.getElementById('surfMax').value;
+  const periodeV = document.getElementById('periodeFilter').value;
+  const typeV    = document.getElementById('typeFilter').value;
+  const heatV    = document.getElementById('heatFilter').value;
+
+  const filterRows = [
+    ['Etiquettes DPE',       [...activeDPE].sort().join(', ') || 'Aucune'],
+    ['Etiquettes GES',       [...activeGES].sort().join(', ') || 'Aucune'],
+    ['Surface habitable',    surfMinV + ' m² → ' + (surfMaxV==='500' ? '500+ m²' : surfMaxV+' m²')],
+    ['Periode construction', periodeV || 'Toutes'],
+    ['Type de batiment',     typeV    || 'Tous'],
+    ['Energie de chauffage', heatV    || 'Toutes'],
+  ];
+
+  // ══════════════ PAGE 1 ══════════════
+  drawHeader();
+  let y = MT + 3;
+
+  // — Filtres —
+  y = secTitle('FILTRES APPLIQUES', y);
+  doc.autoTable({
+    startY: y, margin: { left: ML, right: MR },
+    head: [], body: filterRows,
+    styles: { fontSize: 7.5, cellPadding: 2.5 },
+    columnStyles: { 0:{ fontStyle:'bold', fillColor:[238,245,252], textColor:[13,27,42], cellWidth:52 }, 1:{ textColor:[50,70,90] } },
+    theme: 'grid', tableLineColor:[200,220,235], tableLineWidth:0.2,
+  });
+  y = doc.lastAutoTable.finalY + 7;
+
+  // — KPIs —
+  y = secTitle('INDICATEURS CLES', y);
+  const kW3 = (CW-6)/3;
+  const kpis3 = [
+    { val: n.toLocaleString('fr-FR'), lbl:'LOGEMENTS FILTRES', sub:'sur '+ALL.length.toLocaleString('fr-FR')+' DPEs '+CITY.label },
+    { val: avgCo2!=null ? avgCo2+' kg/m²' : '—', lbl:'EMISSIONS CO2 MOY.', sub:'kgCO2eq/m²/an' },
+    { val: avgSurf!=null ? avgSurf+' m²' : '—',  lbl:'SURFACE MOYENNE',    sub:'m² habitables' },
+  ];
+  kpis3.forEach((k,i) => {
+    const kx = ML + i*(kW3+3);
+    doc.setFillColor(238,248,253); doc.setDrawColor(180,215,235); doc.setLineWidth(0.3);
+    doc.roundedRect(kx, y, kW3, 18, 2, 2, 'FD');
+    doc.setTextColor(0,150,190); doc.setFontSize(14); doc.setFont('helvetica','bold');
+    doc.text(k.val, kx+kW3/2, y+10, { align:'center' });
+    doc.setTextColor(40,65,90); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text(k.lbl, kx+kW3/2, y+14, { align:'center' });
+    doc.setFont('helvetica','normal'); doc.setTextColor(120,150,175);
+    doc.text(k.sub, kx+kW3/2, y+17, { align:'center' });
+  });
+  y += 22;
+
+  const kW2 = (CW-4)/2;
+  const kpis2 = [
+    { val: n ? Math.round(abCount/n*100)+'%' : '—', lbl:'% CLASSE A + B', sub:'bonne performance' },
+    { val: n ? Math.round(fgCount/n*100)+'%' : '—', lbl:'% PASSOIRES (F + G)', sub:'logements energivores' },
+  ];
+  kpis2.forEach((k,i) => {
+    const kx = ML + i*(kW2+4);
+    doc.setFillColor(238,248,253); doc.setDrawColor(180,215,235); doc.setLineWidth(0.3);
+    doc.roundedRect(kx, y, kW2, 14, 2, 2, 'FD');
+    doc.setTextColor(0,150,190); doc.setFontSize(15); doc.setFont('helvetica','bold');
+    doc.text(k.val, kx+kW2/2, y+8, { align:'center' });
+    doc.setTextColor(40,65,90); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text(k.lbl, kx+kW2/2, y+12, { align:'center' });
+  });
+  y += 18;
+
+  // — Carte (placeholder) —
+  y = secTitle('CARTE - LOCALISATION DES LOGEMENTS', y);
+  doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(80,105,125);
+  doc.text('Visualisation des DPEs filtres sur la commune de '+CITY.label+'. La couleur de chaque marqueur correspond a la classe DPE (A=vert, G=rouge).', ML, y, { maxWidth: CW });
+  y += 7;
+
+  doc.setFillColor(240,248,255); doc.setDrawColor(185,215,235); doc.setLineWidth(0.3);
+  doc.roundedRect(ML, y, CW, 42, 2, 2, 'FD');
+  // Points simulés sur la carte
+  const mapCX = ML + CW/2, mapCY = y+18;
+  const pts = [[0,-8],[12,3],[-15,4],[8,10],[-8,-3],[3,12],[-12,-10],[18,-5]];
+  pts.forEach(([dx,dy],i) => {
+    const k = DPE_LABELS[i % 7];
+    doc.setFillColor(...DPE_RGB[k]);
+    doc.circle(mapCX+dx*0.9, mapCY+dy*0.8, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(5.5); doc.setFont('helvetica','bold');
+    doc.text(k, mapCX+dx*0.9, mapCY+dy*0.8+1.5, { align:'center' });
+  });
+  doc.setTextColor(100,130,155); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+  doc.text(n.toLocaleString('fr-FR')+' logements affiches', mapCX, y+36, { align:'center' });
+  // Légende couleurs
+  const legY = y+39.5; let legX = ML+8;
+  DPE_LABELS.forEach(k => {
+    doc.setFillColor(...DPE_RGB[k]); doc.circle(legX, legY, 1.8, 'F');
+    doc.setTextColor(60,80,100); doc.setFontSize(6.5);
+    doc.text(k, legX+3, legY+1); legX += 22;
+  });
+  y += 47;
+
+  // — Répartition DPE —
+  y = secTitle('REPARTITION PAR ETIQUETTE DPE', y);
+  const maxDpe = Math.max(...Object.values(dpeCounts), 1);
+  const barW = CW - 38;
+  DPE_LABELS.forEach(k => {
+    const cnt = dpeCounts[k], pct = n ? (cnt/n*100).toFixed(1) : '0.0';
+    const fill = Math.max(1, Math.round(cnt/maxDpe*barW));
+    doc.setFillColor(...DPE_RGB[k]); doc.circle(ML+3, y+3, 2.8, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(6); doc.setFont('helvetica','bold');
+    doc.text(k, ML+3, y+4.2, { align:'center' });
+    doc.setTextColor(50,70,90); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+    doc.text('('+pct+'%)', ML+9, y+4);
+    doc.setFillColor(228,240,250); doc.roundedRect(ML+28, y+0.5, barW, 5.5, 1, 1, 'F');
+    if(cnt>0){ doc.setFillColor(...DPE_RGB[k]); doc.roundedRect(ML+28, y+0.5, fill, 5.5, 1, 1, 'F'); }
+    doc.setTextColor(100,130,155); doc.setFontSize(7);
+    doc.text(cnt.toLocaleString('fr-FR'), ML+28+barW+2, y+4.5);
+    y += 7.5;
+  });
+
+  drawFooter(1);
+
+  // ══════════════ PAGE 2 ══════════════
+  doc.addPage(); drawHeader(); y = MT + 3;
+
+  // — Répartition GES —
+  y = secTitle('REPARTITION PAR ETIQUETTE GES', y);
+  const maxGes = Math.max(...Object.values(gesCounts), 1);
+  DPE_LABELS.forEach(k => {
+    const cnt = gesCounts[k], pct = n ? (cnt/n*100).toFixed(1) : '0.0';
+    const fill = Math.max(1, Math.round(cnt/maxGes*barW));
+    doc.setFillColor(...DPE_RGB[k]); doc.circle(ML+3, y+3, 2.8, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(6); doc.setFont('helvetica','bold');
+    doc.text(k, ML+3, y+4.2, { align:'center' });
+    doc.setTextColor(50,70,90); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+    doc.text('('+pct+'%)', ML+9, y+4);
+    doc.setFillColor(228,240,250); doc.roundedRect(ML+28, y+0.5, barW, 5.5, 1, 1, 'F');
+    if(cnt>0){ doc.setFillColor(...DPE_RGB[k]); doc.roundedRect(ML+28, y+0.5, fill, 5.5, 1, 1, 'F'); }
+    doc.setTextColor(100,130,155); doc.setFontSize(7);
+    doc.text(cnt.toLocaleString('fr-FR'), ML+28+barW+2, y+4.5);
+    y += 7.5;
+  });
+  y += 5;
+
+  // — 2 colonnes : Énergie + Période —
+  const colW = (CW-6)/2;
+  let y1 = y, y2 = y;
+
+  // Col gauche : Énergie
+  doc.setFillColor(...C_ACC); doc.rect(ML, y1, 3, 6, 'F');
+  doc.setTextColor(...C_BG); doc.setFontSize(8); doc.setFont('helvetica','bold');
+  doc.text('ENERGIE PRINCIPALE DE CHAUFFAGE', ML+5, y1+4.5);
+  doc.setDrawColor(200,225,240); doc.setLineWidth(0.2); doc.line(ML+5, y1+6.5, ML+colW, y1+6.5);
+  y1 += 10;
+  const hMax = heatSorted.length ? heatSorted[0][1] : 1;
+  heatSorted.forEach(([name,cnt]) => { y1 = barRow(name, cnt, n, hMax, ML, y1, colW, [0,119,168]); });
+
+  // Col droite : Période
+  const cx2 = ML + colW + 6;
+  doc.setFillColor(...C_ACC); doc.rect(cx2, y2, 3, 6, 'F');
+  doc.setTextColor(...C_BG); doc.setFontSize(8); doc.setFont('helvetica','bold');
+  doc.text('PERIODE DE CONSTRUCTION', cx2+5, y2+4.5);
+  doc.setDrawColor(200,225,240); doc.setLineWidth(0.2); doc.line(cx2+5, y2+6.5, cx2+colW, y2+6.5);
+  y2 += 10;
+  const perFiltered = PERIODE_ORDER.filter(p=>perCounts[p]);
+  const perMax = perFiltered.length ? Math.max(...perFiltered.map(p=>perCounts[p])) : 1;
+  perFiltered.forEach(p => { y2 = barRow(p, perCounts[p], n, perMax, cx2, y2, colW, [0,77,108]); });
+  y = Math.max(y1,y2) + 8;
+
+  // — Tableau croisé —
+  y = secTitle('SYNTHESE DPE PAR TYPE DE BATIMENT', y);
+  doc.setFontSize(7); doc.setFont('helvetica','italic'); doc.setTextColor(90,115,135);
+  doc.text('Distribution des logements filtres par classe DPE et type de batiment. Donnees extraites de la base ADEME DPE logements existants.', ML, y, { maxWidth: CW });
+  y += 5;
+
+  const totAppt  = FILT.filter(d=>d.type==='appartement').length;
+  const totMais  = FILT.filter(d=>d.type==='maison').length;
+  const totImm   = FILT.filter(d=>d.type==='immeuble').length;
+  const tableBody = DPE_LABELS.map(k => {
+    const r = crossData[k];
+    return [k, r.appartement.toLocaleString('fr-FR'), r.maison.toLocaleString('fr-FR'), r.immeuble.toLocaleString('fr-FR'), r.total.toLocaleString('fr-FR'), n ? (r.total/n*100).toFixed(1)+'%' : '0%'];
+  });
+  tableBody.push(['Total', totAppt.toLocaleString('fr-FR'), totMais.toLocaleString('fr-FR'), totImm.toLocaleString('fr-FR'), n.toLocaleString('fr-FR'), '100 %']);
+
+  doc.autoTable({
+    startY: y, margin: { left: ML, right: MR },
+    head: [['Classe DPE','Appartements','Maisons','Immeubles','Total','% du total']],
+    body: tableBody,
+    styles: { fontSize:7.5, cellPadding:2.5, halign:'center' },
+    headStyles: { fillColor:C_BG, textColor:255, fontStyle:'bold', fontSize:7.5 },
+    alternateRowStyles: { fillColor:[246,251,255] },
+    tableLineColor:[200,220,235], tableLineWidth:0.2,
+    didDrawCell: data => {
+      if(data.section==='body' && data.column.index===0 && data.row.index<7) {
+        const k = DPE_LABELS[data.row.index];
+        doc.setFillColor(...DPE_RGB[k]);
+        doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
+        doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont('helvetica','bold');
+        doc.text(k, data.cell.x+data.cell.width/2, data.cell.y+data.cell.height/2+1.5, { align:'center' });
+      }
+      if(data.section==='body' && data.row.index===7) {
+        doc.setFillColor(225,240,250);
+        doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
+        doc.setTextColor(13,27,42); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+        doc.text(String(data.cell.raw), data.cell.x+data.cell.width/2, data.cell.y+data.cell.height/2+1.5, { align:'center' });
+      }
+    },
+  });
+
+  drawFooter(2);
+
+  // ══════════════ PAGE 3 ══════════════
+  doc.addPage(); drawHeader(); y = MT + 3;
+
+  y = secTitle('SOURCES ET MENTIONS LEGALES', y);
+  doc.setFillColor(240,248,253); doc.setDrawColor(185,215,235); doc.setLineWidth(0.2);
+  doc.roundedRect(ML, y, CW, 48, 2, 2, 'FD');
+  doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(50,75,100);
+  const legalText = 'Donnees issues de la base ADEME « DPE Logements existants » (dataset dpe03existant), disponible sur data.ademe.fr sous licence Etalab 2.0. Les diagnostics de performance energetique (DPE) ont ete realises par des diagnostiqueurs certifies conformement a la reglementation francaise. Ce rapport a ete genere automatiquement par l\'application EnerMap a partir des donnees disponibles au ' + dateStr + '. Les valeurs affichees correspondent aux logements correspondant aux filtres selectionnes et ne constituent pas une analyse exhaustive.';
+  const lines = doc.splitTextToSize(legalText, CW-10);
+  doc.text(lines, ML+5, y+8);
+
+  y += 56;
+  // Recap filtres en boîte
+  y = secTitle('RAPPEL DES PARAMETRES DE GENERATION', y);
+  doc.autoTable({
+    startY: y, margin: { left: ML, right: MR },
+    head: [['Parametre','Valeur']],
+    body: [
+      ...filterRows,
+      ['Ville', CITY.label],
+      ['Logements filtres / total', n.toLocaleString('fr-FR') + ' / ' + ALL.length.toLocaleString('fr-FR')],
+      ['Date de generation', dateStr + ' a ' + timeStr],
+    ],
+    styles: { fontSize:7.5, cellPadding:2.5 },
+    headStyles: { fillColor:C_BG, textColor:255, fontStyle:'bold' },
+    columnStyles: { 0:{ fontStyle:'bold', fillColor:[238,245,252], textColor:[13,27,42], cellWidth:52 }, 1:{ textColor:[50,70,90] } },
+    alternateRowStyles: { fillColor:[246,251,255] },
+    theme: 'grid', tableLineColor:[200,220,235], tableLineWidth:0.2,
+  });
+
+  drawFooter(3);
+
+  // ── Sauvegarde ──
+  const filename = 'EnerMap_Rapport_' + CITY.label + '_' + dateStr.replace(/\//g,'-') + '.pdf';
+  doc.save(filename);
+}
+
+// ─────────────────────────────────────────────────────────────
+// BOOT
+// ─────────────────────────────────────────────────────────────
+initChips();
+streamDPE();
+</script>
+</body>
 </html>

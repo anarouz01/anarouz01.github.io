@@ -1,0 +1,563 @@
+:root{
+  /* Thème bleu / gris — cohérent sur toute l'appli (boutons, bandeau, popup, marque). */
+  --ink: #16233a;
+  --ink-soft: #4a5b70;
+  --ink-faint: #7c8ba0;
+  --line: rgba(22,35,58,0.1);
+  --surface: rgba(255,255,255,0.84);
+  --surface-solid: #ffffff;
+  --accent-1: #4fc3f7;
+  --accent-2: #0a1f5c;
+  --accent-grad: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  --low: #4fc3f7;
+  --high: #001F3F; /* Navy — haut du dégradé carte/légende */
+  --consumption-low: #7FDBFF; /* Aqua — bas du dégradé carte/légende, distinct du bleu des boutons */
+  --consumption-mid: #0074D9; /* Blue — palier intermédiaire du dégradé */
+  --shadow-lg: 0 20px 45px -18px rgba(10,20,40,0.35), 0 4px 14px -4px rgba(10,20,40,0.12);
+  --shadow-sm: 0 2px 8px rgba(10,20,40,0.08);
+  --radius: 16px;
+  --notice-bg: #eaf0f7;
+  --notice-ink: #3a5170;
+  --banner-h: 34px;
+  --gap: 18px;
+  --content-top: calc(var(--banner-h) + var(--gap) + 72px); /* bandeau + barre d'outils + marge */
+}
+
+*{ box-sizing: border-box; }
+html, body{ height: 100%; margin: 0; }
+body{
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  color: var(--ink);
+  background: #eef2f7;
+}
+.sr-only{ position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* ---- Map fills the whole viewport ---- */
+#map{ position: fixed; inset: 0; }
+
+/* ---- Bandeau d'avertissement démo ---- */
+#demo-banner{
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--banner-h);
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 16px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--notice-ink);
+  background: var(--notice-bg);
+  border-bottom: 1px solid rgba(58,81,112,0.18);
+}
+
+/* ---- Floating toolbar : nom de l'app + recherche uniquement ---- */
+#toolbar{
+  position: fixed;
+  top: calc(var(--banner-h) + var(--gap));
+  left: 18px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+  padding: 12px 20px;
+  background: var(--surface);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  border: 1px solid rgba(255,255,255,0.6);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ---- Niveau DPI / Quartier / Ville : widget séparé, centré en haut ---- */
+.level-widget{
+  position: fixed;
+  top: calc(var(--banner-h) + var(--gap));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  padding: 8px;
+  background: var(--surface);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  border: 1px solid rgba(255,255,255,0.6);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+
+.brand{ display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.brand-mark{ width: 24px; height: 24px; }
+.brand-name{
+  font-family: "Sora", sans-serif;
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.brand-name em{
+  font-style: normal;
+  background: var(--accent-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.brand-tag{
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+  background: var(--low);
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+
+.control-group{ display: flex; align-items: center; gap: 8px; font-size: 13.5px; border: none; padding: 0; margin: 0; }
+.field-label{ color: var(--ink-soft); font-size: 13px; }
+
+#period-select{
+  font: inherit;
+  font-size: 13.5px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-solid);
+  color: var(--ink);
+}
+
+/* ---- Segmented level control ---- */
+#level-control{
+  gap: 3px;
+  background: rgba(11,34,48,0.05);
+  border-radius: 999px;
+  padding: 3px;
+}
+.level-btn{
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 16px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease, box-shadow .18s ease;
+}
+.level-btn:hover{ color: var(--ink); }
+.level-btn.is-active{
+  background: var(--low);
+  color: #fff;
+  box-shadow: 0 4px 12px -2px rgba(21,94,158,0.45);
+}
+
+/* ---- Plage de dates (F5, slider double-poignée) — widget flottant bas-centre ---- */
+.time-widget{
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10; /* toujours au-dessus du panneau détail, même en cas de léger débordement */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  background: var(--surface);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  border: 1px solid rgba(255,255,255,0.6);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  width: min(460px, calc(100vw - 420px));
+}
+.time-widget .range-slider{ width: 100%; }
+.range-slider{
+  position: relative;
+  flex: 1;
+  height: 20px;
+  display: flex;
+  align-items: center;
+}
+.range-fill{
+  position: absolute;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--accent-grad);
+  pointer-events: none;
+}
+.range-slider input[type="range"]{
+  position: absolute;
+  left: 0; right: 0;
+  width: 100%;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+.range-slider input[type="range"]::-webkit-slider-runnable-track{
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line);
+}
+.range-slider input[type="range"]::-moz-range-track{
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line);
+}
+.range-slider input[type="range"]::-webkit-slider-thumb{
+  appearance: none;
+  -webkit-appearance: none;
+  pointer-events: all;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--accent-grad);
+  border: 2px solid #fff;
+  box-shadow: var(--shadow-sm);
+  margin-top: -6px;
+  cursor: pointer;
+}
+.range-slider input[type="range"]::-moz-range-thumb{
+  pointer-events: all;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--accent-2);
+  border: 2px solid #fff;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+.range-values{
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* ---- Nature client — widget vertical à gauche de la carte (F4) ---- */
+.nature-widget{
+  position: fixed;
+  top: var(--content-top);
+  left: 18px;
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  background: var(--surface);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  border: 1px solid rgba(255,255,255,0.6);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  width: 168px;
+}
+.widget-title{
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
+  padding: 0 0 2px;
+  margin: 0;
+}
+.chip-v{
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface-solid);
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.chip-v input{ position: absolute; opacity: 0; width: 0; height: 0; }
+.chip-v:has(input:checked){
+  background: var(--low);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 4px 12px -2px rgba(20,184,166,0.4);
+}
+.chip-v:has(input:focus-visible){ outline: 2px solid var(--accent-2); outline-offset: 2px; }
+.chip-v span{ display: inline-flex; align-items: center; gap: 8px; }
+.chip-v svg{ flex-shrink: 0; }
+
+/* ---- Fond de carte — widget bas-gauche ---- */
+.basemap-widget{
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--surface);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  border: 1px solid rgba(255,255,255,0.6);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  width: 168px;
+}
+#basemap-control{ display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.basemap-btn{
+  font: inherit;
+  font-size: 12.5px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-solid);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease, box-shadow .18s ease;
+}
+.basemap-btn:hover{ color: var(--ink); }
+.basemap-btn.is-active{
+  background: var(--low);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 12px -2px rgba(21,94,158,0.4);
+}
+
+/* ---- Legend ---- */
+/* ---- Recherche DPI ---- */
+.search-control{
+  position: relative;
+  flex: 1;
+  min-width: 270px;
+  max-width: 340px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-solid);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 7px 10px;
+}
+.search-control input{
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+}
+.search-control input::placeholder{ color: var(--ink-faint); }
+.search-control button{
+  display: flex;
+  border: none;
+  background: transparent;
+  color: var(--ink-faint);
+  cursor: pointer;
+  padding: 2px;
+}
+.search-control button:hover{ color: var(--accent-2); }
+.search-error{
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  margin: 0;
+  font-size: 12px;
+  color: #b3261e;
+  background: var(--surface-solid);
+  border: 1px solid rgba(179,38,30,0.25);
+  border-radius: 8px;
+  padding: 5px 10px;
+  box-shadow: var(--shadow-sm);
+  white-space: nowrap;
+}
+
+.search-suggestions{
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--surface-solid);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+}
+.search-suggestions li{
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.search-suggestions li:hover,
+.search-suggestions li.is-active{ background: var(--consumption-low, #e8f4fb); }
+.suggestion-id{ font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.suggestion-meta{ font-size: 11.5px; color: var(--ink-faint); white-space: nowrap; }
+
+.legend{
+  position: fixed;
+  right: 18px;
+  bottom: 42px; /* laisse apparaître le texte d'attribution MapLibre, tout en bas de la carte */
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  background: var(--surface);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  border: 1px solid rgba(255,255,255,0.6);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  min-width: 140px;
+}
+.legend-bar{
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--consumption-low), var(--consumption-mid), var(--high));
+}
+.legend-labels{ display: flex; justify-content: space-between; font-size: 10.5px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* ---- Floating detail panel (F2/F3/F6/F7) ---- */
+#panel{
+  position: fixed;
+  top: var(--content-top);
+  right: 18px;
+  max-height: calc(100vh - var(--content-top) - 18px);
+  width: 680px;
+  z-index: 9;
+  overflow-y: auto;
+  background: var(--surface);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  border: 1px solid rgba(255,255,255,0.6);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: 22px;
+}
+.panel-close{
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface-solid);
+  color: var(--ink-soft);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+.panel-close:hover{ color: var(--ink); }
+
+.panel-placeholder{ color: var(--ink-soft); font-size: 14px; line-height: 1.55; margin: 8px 0 0; }
+
+.panel-head{ margin: 0 0 14px; padding-right: 34px; }
+.panel-head-row{
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: start;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.panel-title-block{ min-width: 0; justify-self: start; }
+.panel-period{
+  justify-self: center;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  background: var(--surface-solid);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 10px;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+.panel-icons{ justify-self: end; display: flex; gap: 6px; }
+.panel-icon{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--consumption-low, #e8f4fb);
+  color: var(--accent-2);
+}
+.panel-title{
+  font-family: "Sora", sans-serif;
+  font-size: 19px;
+  font-weight: 600;
+  margin: 0 0 2px;
+  word-break: break-word;
+}
+.panel-subtitle{
+  font-size: 12px;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 10px;
+}
+.panel-location{
+  font-size: 13px;
+  color: var(--ink);
+  margin: 0 0 3px;
+}
+.panel-location .k{ color: var(--ink-soft); }
+
+/* Badges compacts pour période / quartier / ville / nature — remplace les tuiles pleines,
+   pour laisser toute la place au volume (hero) et au graphique. */
+.badge-row{ display: flex; flex-wrap: wrap; gap: 6px; }
+.badge-pill{
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  background: var(--surface-solid);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+
+.metric{
+  background: var(--surface-solid);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: var(--shadow-sm);
+}
+.metric .k{ display: block; font-size: 11px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+.metric .v{ font-family: "IBM Plex Mono", monospace; font-size: 16px; font-weight: 500; color: var(--ink); word-break: break-word; }
+.metric .v.accent{ color: var(--accent-2); }
+.metric.hero{
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(79,195,247,0.1), rgba(10,31,92,0.1));
+}
+.metric.hero .k{ font-size: 11.5px; }
+.metric.hero .v{ font-size: 26px; font-weight: 600; }
+.metric-row{ display: flex; gap: 12px; margin: 0 0 20px; }
+.metric-row .metric.hero{ flex: 1; margin: 0; }
+
+.panel-chart-title{ font-size: 12px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px; }
+.chart-empty{ font-size: 13px; color: var(--ink-soft); font-style: italic; }
+.chart-card{ background: var(--surface-solid); border: 1px solid var(--line); border-radius: 12px; padding: 12px 6px 6px; box-shadow: var(--shadow-sm); }
+
+/* ---- Responsive: stack panel below toolbar on narrow viewports ---- */
+@media (max-width: 820px){
+  #panel{ left: 18px; width: auto; top: auto; height: 40vh; bottom: 18px; }
+}

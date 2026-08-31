@@ -12,6 +12,8 @@
   --low: #4fc3f7;
   --high: #001F3F; /* Navy — haut du dégradé carte/légende */
   --consumption-low: #7FDBFF; /* Aqua — bas du dégradé carte/légende, distinct du bleu des boutons */
+  --selected: #7FDBFF; /* Couleur unique de l'état sélectionné, pour tous les boutons (bureau + mobile) */
+  --selected-ink: var(--ink); /* Fond clair : icône/texte foncé plutôt que blanc, pour rester lisible */
   --consumption-mid: #0074D9; /* Blue — palier intermédiaire du dégradé */
   --shadow-lg: 0 20px 45px -18px rgba(10,20,40,0.35), 0 4px 14px -4px rgba(10,20,40,0.12);
   --shadow-sm: 0 2px 8px rgba(10,20,40,0.08);
@@ -72,7 +74,9 @@ body{
   box-shadow: var(--shadow-lg);
 }
 
-/* ---- Niveau DPI / Quartier / Ville : widget séparé, centré en haut ---- */
+/* ---- Niveau DPI / Quartier / Ville : groupe de boutons, centré au-dessus de la carte ----
+   Sur mobile (cf. media query plus bas), ce même widget devient un rail vertical d'icônes
+   collé au bord gauche — mais la version bureau ci-dessous ne change pas. */
 .level-widget{
   position: fixed;
   top: calc(var(--banner-h) + var(--gap));
@@ -128,7 +132,7 @@ body{
   color: var(--ink);
 }
 
-/* ---- Segmented level control ---- */
+/* ---- Sélecteur de niveau : groupe de boutons pilule, texte visible (bureau) ---- */
 #level-control{
   gap: 3px;
   background: rgba(11,34,48,0.05);
@@ -149,10 +153,13 @@ body{
 }
 .level-btn:hover{ color: var(--ink); }
 .level-btn.is-active{
-  background: var(--low);
-  color: #fff;
-  box-shadow: 0 4px 12px -2px rgba(21,94,158,0.45);
+  background: var(--selected);
+  border-color: transparent;
+  color: var(--selected-ink);
+  box-shadow: 0 4px 12px -2px rgba(127,219,255,0.6);
 }
+/* L'icône n'existe que pour la version mobile (rail à icônes seules) — masquée par défaut. */
+.level-icon{ display: none; }
 
 /* ---- Plage de dates (F5, slider double-poignée) — widget flottant bas-centre ---- */
 .time-widget{
@@ -237,7 +244,9 @@ body{
   white-space: nowrap;
 }
 
-/* ---- Nature client — widget vertical à gauche de la carte (F4) ---- */
+/* ---- Nature client — liste verticale de filtres à gauche de la carte (F4) ----
+   Sur mobile (cf. media query plus bas), ce même widget devient un rail d'icônes seules collé
+   au bord droit — mais la version bureau ci-dessous ne change pas. */
 .nature-widget{
   position: fixed;
   top: var(--content-top);
@@ -279,10 +288,10 @@ body{
 }
 .chip-v input{ position: absolute; opacity: 0; width: 0; height: 0; }
 .chip-v:has(input:checked){
-  background: var(--low);
+  background: var(--selected);
   border-color: transparent;
-  color: #fff;
-  box-shadow: 0 4px 12px -2px rgba(20,184,166,0.4);
+  color: var(--selected-ink);
+  box-shadow: 0 4px 12px -2px rgba(127,219,255,0.6);
 }
 .chip-v:has(input:focus-visible){ outline: 2px solid var(--accent-2); outline-offset: 2px; }
 .chip-v span{ display: inline-flex; align-items: center; gap: 8px; }
@@ -320,10 +329,10 @@ body{
 }
 .basemap-btn:hover{ color: var(--ink); }
 .basemap-btn.is-active{
-  background: var(--low);
-  color: #fff;
+  background: var(--selected);
+  color: var(--selected-ink);
   border-color: transparent;
-  box-shadow: 0 4px 12px -2px rgba(21,94,158,0.4);
+  box-shadow: 0 4px 12px -2px rgba(127,219,255,0.6);
 }
 
 /* ---- Legend ---- */
@@ -557,7 +566,131 @@ body{
 .chart-empty{ font-size: 13px; color: var(--ink-soft); font-style: italic; }
 .chart-card{ background: var(--surface-solid); border: 1px solid var(--line); border-radius: 12px; padding: 12px 6px 6px; box-shadow: var(--shadow-sm); }
 
-/* ---- Responsive: stack panel below toolbar on narrow viewports ---- */
-@media (max-width: 820px){
-  #panel{ left: 18px; width: auto; top: auto; height: 40vh; bottom: 18px; }
+/* Sur grand écran, ces conteneurs sont transparents à la mise en page : chaque élément qu'ils
+   contiennent garde sa propre position flottante indépendante, exactement comme avant. */
+#top-stack{ display: contents; }
+
+/* ---- Responsive (mobile/tablette portrait) ----
+   Le bandeau + la barre d'outils s'empilent via #top-stack (Flexbox, pour ne pas avoir à deviner
+   la hauteur réelle du bandeau). Les rails niveau/nature (icônes seules) et le curseur temporel
+   gardent chacun leur propre position fixe, comme sur grand écran, juste réajustée pour l'absence
+   de panneau latéral. */
+@media (max-width: 720px){
+  #top-stack{
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 11;
+  }
+  #top-stack > *{ position: static; inset: auto; width: auto; }
+  #demo-banner{ height: auto; padding: 8px 16px; }
+
+  #toolbar{
+    left: 10px;
+    right: 10px;
+    padding: 10px 14px;
+    gap: 10px;
+  }
+  .brand-tag{ display: none; } /* gagne de la place pour que le champ de recherche tienne sur la même ligne */
+  .search-control{ min-width: 0; max-width: none; flex-basis: 200px; }
+
+  /* Le curseur temporel doit rester visible même quand le panneau détail est ouvert : il garde
+     sa propre position fixe (déclarée hors de #mobile-stack dans le HTML), tout en bas, au-dessus
+     du panneau (z-index supérieur) — ni la pile de widgets, ni le panneau, ne descendent jusque-là. */
+  .time-widget{
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    width: auto;
+    transform: none;
+    z-index: 20;
+  }
+
+  /* Le fond de carte n'est pas indispensable en usage mobile — un widget en moins à empiler. */
+  .basemap-widget{ display: none; }
+
+  /* Uniquement sur mobile : les groupes de boutons "texte" du bureau (niveau centré en haut,
+     filtres nature en liste à gauche) laissent place à deux rails d'icônes seules, verticaux,
+     collés chacun à un bord — l'écran est trop étroit pour garder le texte ou la mise en page
+     bureau. La version bureau (règles de base plus haut) ne bouge pas. */
+  .level-widget{
+    top: 40%;
+    left: 18px;
+    transform: translateY(-50%);
+  }
+  #level-control{
+    flex-direction: column;
+    gap: 6px;
+    background: transparent;
+    border-radius: 0;
+    padding: 0;
+  }
+  /* Même logique visuelle que les puces nature : non sélectionné = fond clair/icône sombre
+     (comme une puce décochée), sélectionné = dégradé bleu (.level-btn.is-active, même bleu que
+     les puces cochées) — pour que l'état actif reste identifiable au premier coup d'œil. */
+  .level-btn{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--surface-solid);
+    color: var(--ink-soft);
+  }
+  .level-icon{ display: inline-flex; }
+  .level-label{ display: none; }
+
+  .nature-widget{
+    top: 40%;
+    left: auto;
+    right: 10px;
+    transform: translateY(-50%);
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+    width: auto;
+  }
+  .nature-widget .widget-title{ display: none; }
+  .chip-v{
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+  }
+  /* Spécificité : ".chip-v span" (règle de base, icône+texte) l'emporterait sinon sur une simple
+     classe ".chip-label" — il faut qualifier par ".chip-v" pour gagner en spécificité. */
+  .chip-v .chip-label{ display: none; }
+
+  .legend{ display: none; } /* accessoire — le dégradé reste lisible directement sur la carte */
+
+  /* Le panneau détail devient une feuille ancrée en bas plutôt qu'une carte à droite — au-dessus
+     de #mobile-stack (z-index 10), mais sous le curseur temporel (z-index 20) qui doit rester
+     visible et cliquable même fiche ouverte. Sa hauteur s'arrête avant le curseur, pas dessus. */
+  #panel{
+    left: 10px;
+    right: 10px;
+    width: auto;
+    top: auto;
+    bottom: 100px;
+    max-height: 60vh;
+    z-index: 15;
+  }
+  /* La grille à 3 colonnes (titre / période / icônes) n'a pas la place de respirer sur un
+     panneau de largeur téléphone — on empile les 3 blocs à la place, chacun pleine largeur. */
+  .panel-head-row{ display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+  .panel-icons{ align-self: flex-start; }
+
+  /* Sans sélection, le panneau ne contient qu'un texte d'invite : le masquer plutôt que le
+     laisser recouvrir en permanence les widgets du bas (niveau/filtres/fond de carte/plage). */
+  #panel:has(.panel-placeholder){ display: none; }
 }

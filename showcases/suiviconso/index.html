@@ -17,6 +17,10 @@
 
 <div id="map"></div>
 
+<!-- Comme #mobile-stack : sans effet sur grand écran (display:contents), devient la seule zone
+     fixe sur mobile pour que la barre d'outils s'empile proprement sous le bandeau, quelle que
+     soit la hauteur réelle de ce dernier (le texte peut faire 2 ou 3 lignes selon l'écran). -->
+<div id="top-stack">
 <div id="demo-banner">Démonstration — les données affichées (localisation, nature client, historique de consommation) sont fictives, générées pour les besoins du POC.</div>
 
 <header id="toolbar">
@@ -43,30 +47,32 @@
     <ul class="search-suggestions" id="search-suggestions" hidden></ul>
   </form>
 </header>
+</div>
 
+<!-- Niveau d'agrégation (F1/F6/F7) : groupe de boutons centré sur bureau, rail d'icônes seules
+     à gauche sur mobile (cf. style.css). -->
 <div class="level-widget">
   <div class="control-group" id="level-control" role="group" aria-label="Niveau d'agrégation">
-    <button type="button" data-level="dpi" class="level-btn is-active">DPI</button>
-    <button type="button" data-level="quartier" class="level-btn">Quartier</button>
-    <button type="button" data-level="ville" class="level-btn">Ville</button>
+    <button type="button" data-level="dpi" class="level-btn is-active"></button>
+    <button type="button" data-level="quartier" class="level-btn"></button>
+    <button type="button" data-level="ville" class="level-btn"></button>
   </div>
 </div>
 
-<div class="legend" id="legend">
-  <span class="widget-title">Consommation</span>
-  <span class="legend-bar"></span>
-  <span class="legend-labels"><span>Faible</span><span>Forte</span></span>
-</div>
-
+<!-- Filtre nature client (F4) : liste verticale à gauche sur bureau, rail d'icônes seules à
+     droite sur mobile (cf. style.css). -->
 <div class="nature-widget" id="nature-control" role="group" aria-label="Filtrer par nature de client">
-  <div class="widget-title">Nature client</div>
+  <span class="widget-title">Nature client</span>
 </div>
 
+<!-- Fond de carte : masqué sur mobile (cf. style.css). -->
 <div class="basemap-widget">
   <span class="widget-title">Fond de carte</span>
   <div id="basemap-control"></div>
 </div>
 
+<!-- Le curseur temporel doit rester visible et cliquable même quand le panneau détail (feuille
+     basse sur mobile) est ouvert — il garde donc sa propre position fixe. -->
 <div class="time-widget">
   <span class="widget-title">Curseur temporel — plage de dates affichée</span>
   <div class="range-slider">
@@ -75,6 +81,12 @@
     <input type="range" id="range-end" min="0" max="12" value="12" step="1">
   </div>
   <span class="range-values"><span id="range-label-start"></span> → <span id="range-label-end"></span></span>
+</div>
+
+<div class="legend" id="legend">
+  <span class="widget-title">Consommation</span>
+  <span class="legend-bar"></span>
+  <span class="legend-labels"><span>Faible</span><span>Forte</span></span>
 </div>
 
 <aside id="panel">

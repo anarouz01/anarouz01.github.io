@@ -131,13 +131,27 @@ App.mapLayers = (function () {
     map.addLayer({ id: 'basemap', type: 'raster', source: 'basemap' }, 'dpi-clusters');
   }
 
-  // Décalage horizontal (px) pour que le point/zone sélectionné ne se retrouve jamais sous le
-  // panneau détail (680px de large, ancré à droite) une fois la fiche ouverte.
+  // En dessous de ce seuil (aligné sur le point de rupture CSS de style.css), le panneau détail
+  // devient une feuille ancrée en bas de l'écran plutôt qu'une carte à droite — le point/zone à
+  // garder visible doit donc être décalé vers le haut, pas vers la gauche.
+  const MOBILE_BREAKPOINT = 720;
+  function isMobile() {
+    return typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT;
+  }
+
+  // Décalage pour que le point/zone sélectionné ne se retrouve jamais sous le panneau détail
+  // une fois la fiche ouverte : horizontal sur grand écran (panneau à droite, 680px), vertical
+  // sur mobile (panneau en feuille basse, jusqu'à 75% de la hauteur d'écran).
   const PANEL_CLEARANCE = 360;
+  function selectionOffset() {
+    if (!isMobile()) return [-PANEL_CLEARANCE, 0];
+    const h = (typeof window !== 'undefined' && window.innerHeight) || 700;
+    return [0, -Math.round(h * 0.32)];
+  }
 
   // Centre la carte sur un DPI et zoome assez pour le sortir de son cluster (recherche).
   function flyToDpi(map, dpi) {
-    map.flyTo({ center: [dpi.lon, dpi.lat], zoom: 15, offset: [-PANEL_CLEARANCE, 0], duration: 700 });
+    map.flyTo({ center: [dpi.lon, dpi.lat], zoom: 15, offset: selectionOffset(), duration: 700 });
   }
 
   function addSourcesAndLayers(map, data, initialState) {
@@ -223,10 +237,15 @@ App.mapLayers = (function () {
       paint: { 'line-color': COLOR_HIGH, 'line-width': 1.5 },
     });
 
-    // Marges asymétriques pour que les points ne se retrouvent jamais sous les widgets flottants
-    // (barre du haut, filtres à gauche, fond de carte en bas-gauche, panneau détail à droite).
+    // Marges asymétriques pour que les points ne se retrouvent jamais sous les widgets flottants.
+    // Sur grand écran : barre du haut, rail niveau (icônes) à gauche, panneau + rail nature à
+    // droite. Sur mobile : bandeau/barre en haut, rails niveau/nature sur les côtés (à mi-hauteur),
+    // curseur temporel en bas — plus de pile de widgets pleine largeur à éviter.
     const bounds = bboxOfDpi(DPI);
-    map.fitBounds(bounds, { padding: { top: 110, left: 210, right: 380, bottom: 170 }, duration: 0 });
+    const padding = isMobile()
+      ? { top: 90, left: 90, right: 90, bottom: 120 }
+      : { top: 110, left: 110, right: 380, bottom: 170 };
+    map.fitBounds(bounds, { padding, duration: 0 });
   }
 
   function bindClicks(map, onSelect) {
@@ -240,8 +259,8 @@ App.mapLayers = (function () {
         const f = e.features[0];
         onSelect({ type, id: f.properties[prop] });
         // Recentre pour que le point/la zone sélectionnée ne se retrouve pas sous le panneau
-        // détail (680px, à droite) qui vient de s'ouvrir.
-        map.easeTo({ center: e.lngLat, offset: [-PANEL_CLEARANCE, 0], duration: 500 });
+        // détail qui vient de s'ouvrir (à droite sur grand écran, en bas sur mobile).
+        map.easeTo({ center: e.lngLat, offset: selectionOffset(), duration: 500 });
       });
     });
 
@@ -266,6 +285,8 @@ App.mapLayers = (function () {
     const rangeStart = state.rangeStart, rangeEnd = state.rangeEnd, natures = state.natures,
       level = state.level, basemap = state.basemap, selection = state.selection;
     const selectedDpiId = selection && selection.type === 'dpi' ? selection.id : NO_SELECTION;
+    const selectedQuartierId = selection && selection.type === 'quartier' ? selection.id : NO_SELECTION;
+    const selectedVilleId = selection && selection.type === 'ville' ? selection.id : NO_SELECTION;
 
     // --- fond de carte (widget) ---
     if (map.__basemap !== basemap) {
@@ -314,12 +335,30 @@ App.mapLayers = (function () {
     const quartierAgg = aggregateByKey(filtered, 'quartier', PERIODES, rangeStart, rangeEnd);
     const quartierDomain = percentiles(quartierAgg.map(a => a.avg));
     map.getSource('quartier-src').setData(withAggregates(data.QUARTIERS, quartierAgg, 'quartier'));
-    map.setPaintProperty('quartier-fill', 'fill-color', colorScale('avg', quartierDomain.p50, quartierDomain.p90));
+    map.setPaintProperty('quartier-fill', 'fill-color', [
+      'case', ['==', ['get', 'quartier'], selectedQuartierId], SELECTED_COLOR,
+      colorScale('avg', quartierDomain.p50, quartierDomain.p90),
+    ]);
+    map.setPaintProperty('quartier-outline', 'line-color', [
+      'case', ['==', ['get', 'quartier'], selectedQuartierId], SELECTED_STROKE, COLOR_HIGH,
+    ]);
+    map.setPaintProperty('quartier-outline', 'line-width', [
+      'case', ['==', ['get', 'quartier'], selectedQuartierId], 3, 1.5,
+    ]);
 
     const villeAgg = aggregateByKey(filtered, 'ville', PERIODES, rangeStart, rangeEnd);
     const villeDomain = percentiles(villeAgg.map(a => a.avg));
     map.getSource('ville-src').setData(withAggregates(data.VILLES, villeAgg, 'ville'));
-    map.setPaintProperty('ville-fill', 'fill-color', colorScale('avg', villeDomain.p50, villeDomain.p90));
+    map.setPaintProperty('ville-fill', 'fill-color', [
+      'case', ['==', ['get', 'ville'], selectedVilleId], SELECTED_COLOR,
+      colorScale('avg', villeDomain.p50, villeDomain.p90),
+    ]);
+    map.setPaintProperty('ville-outline', 'line-color', [
+      'case', ['==', ['get', 'ville'], selectedVilleId], SELECTED_STROKE, COLOR_HIGH,
+    ]);
+    map.setPaintProperty('ville-outline', 'line-width', [
+      'case', ['==', ['get', 'ville'], selectedVilleId], 3, 1.5,
+    ]);
   }
 
   return { BASEMAPS, createMap, setBasemap, flyToDpi, addSourcesAndLayers, bindClicks, update };

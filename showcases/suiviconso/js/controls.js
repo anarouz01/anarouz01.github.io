@@ -6,6 +6,8 @@ window.App = window.App || {};
 App.controls = (function () {
   const natureIcon = App.icons.natureIcon;
   const NATURE_LIST = App.icons.NATURE_LIST;
+  const levelIcon = App.icons.levelIcon;
+  const LEVEL_LABELS = App.icons.LEVEL_LABELS;
 
   function initRangeSlider(state, periodes) {
     const startInput = document.getElementById('range-start');
@@ -47,12 +49,15 @@ App.controls = (function () {
     });
   }
 
+  // L'icône + le texte sont toujours dans le DOM ; c'est le CSS (media query mobile) qui masque
+  // le texte et ne garde que l'icône sur petit écran — le rendu bureau (icône + libellé) ne
+  // change pas ici.
   function initNatureFilters(state) {
     const container = document.getElementById('nature-control');
     container.insertAdjacentHTML('beforeend', NATURE_LIST.map(nature => `
-      <label class="chip-v">
+      <label class="chip-v" title="${nature}">
         <input type="checkbox" value="${nature}" checked>
-        <span>${natureIcon(nature)}${nature}</span>
+        <span>${natureIcon(nature)}<span class="chip-label">${nature}</span></span>
       </label>
     `).join(''));
 
@@ -65,7 +70,12 @@ App.controls = (function () {
   function initLevelControl(state) {
     const buttons = document.querySelectorAll('.level-btn');
     buttons.forEach(btn => {
-      btn.addEventListener('click', () => state.setLevel(btn.dataset.level));
+      const level = btn.dataset.level;
+      const label = LEVEL_LABELS[level] || level;
+      btn.innerHTML = `<span class="level-icon">${levelIcon(level, 18)}</span><span class="level-label">${label}</span>`;
+      btn.title = label;
+      btn.setAttribute('aria-label', label);
+      btn.addEventListener('click', () => state.setLevel(level));
     });
     // Synchronisé sur le state (pas seulement sur le clic) : le niveau peut aussi changer
     // depuis la recherche DPI, qui doit forcer le niveau "DPI".

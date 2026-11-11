@@ -61,7 +61,27 @@ function parseArgs(argv) {
 
 /** « 01 - Le mix marketing » → « Le mix marketing » ; « 1re année » reste « 1re année ». */
 export function displayName(name) {
-  return name.replace(/^\d+\s*[-–—_.)]\s*/, '').trim();
+  return name.replace(/^\d+\s*[-–—_.)]\s*/, '').replace(/_+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Retrouve le PDF auquel se rattache un quiz :
+ * 1. même nom de fichier (« 01 - Titre.pdf » / « 01 - Titre.quiz.json ») ;
+ * 2. sinon même numéro en tête, si un seul PDF le porte (« 01_Management.pdf » / « 01_Quiz_Management.quiz.json ») ;
+ * 3. sinon même titre une fois le mot « quiz » retiré.
+ */
+export function linkQuiz(quizBase, pdfBases) {
+  if (pdfBases.includes(quizBase)) return quizBase;
+  const num = (b) => { const m = b.match(/^(\d+)\s*[-–—_.)]/); return m ? Number(m[1]) : null; };
+  const n = num(quizBase);
+  if (n !== null) {
+    const same = pdfBases.filter((b) => num(b) === n);
+    if (same.length === 1) return same[0];
+  }
+  const norm = (b) => displayName(b).toLowerCase().replace(/\bquiz\b/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  const target = norm(quizBase);
+  const byName = pdfBases.filter((b) => norm(b) === target);
+  return byName.length === 1 ? byName[0] : null;
 }
 const natural = (a, b) => a.localeCompare(b, 'fr', { numeric: true, sensitivity: 'base' });
 const hidden = (name) => name.startsWith('.') || /^(desktop\.ini|thumbs\.db)$/i.test(name);
@@ -205,7 +225,7 @@ export function scan(source) {
         const mDir = path.join(sDir, em.name);
         const matiere = { nom: displayName(em.name), dir: mDir, cours: [], quiz: [], liens: [] };
         const files = listDir(mDir);
-        const pdfBases = new Set(files.filter((f) => f.isFile() && /\.pdf$/i.test(f.name) && !isDraft(f.name)).map((f) => f.name.replace(/\.pdf$/i, '')));
+        const pdfBases = files.filter((f) => f.isFile() && /\.pdf$/i.test(f.name) && !isDraft(f.name)).map((f) => f.name.replace(/\.pdf$/i, ''));
         for (const f of files) {
           const p = path.join(mDir, f.name);
           const where = rel(p, source);
@@ -222,7 +242,7 @@ export function scan(source) {
             const parsed = parseQuiz(fs.readFileSync(p, 'utf8'), where);
             errors.push(...parsed.errors);
             if (parsed.errors.length) continue;
-            matiere.quiz.push({ base, titre: parsed.titre || displayName(base), questions: parsed.questions, linked: pdfBases.has(base) ? base : null, where });
+            matiere.quiz.push({ base, titre: parsed.titre || displayName(base), questions: parsed.questions, linked: linkQuiz(base, pdfBases), where });
           } else if (/^liens\.json$/i.test(f.name)) {
             const parsed = parseLiens(fs.readFileSync(p, 'utf8'), where);
             errors.push(...parsed.errors);
@@ -317,6 +337,10 @@ async function main() {
   }
   let nbC = 0; let nbQ = 0; let nbQuestions = 0; let nbM = 0;
   for (const a of scanned.annees) for (const s of a.semestres) for (const m of s.matieres) { nbM++; nbC += m.cours.length; nbQ += m.quiz.length; nbQuestions += m.quiz.reduce((x, q) => x + q.questions.length, 0); }
+  for (const a of scanned.annees) for (const sm of a.semestres) for (const m of sm.matieres) {
+    const libres = m.quiz.filter((q) => !q.linked);
+    if (libres.length) info(`${m.nom} : quiz sur toute la matière (non rattaché à un cours) → ${libres.map((q) => q.titre).join(', ')}`);
+  }
   ok(`Contrôle réussi : ${scanned.annees.length} année(s), ${nbM} matière(s), ${nbC} cours, ${nbQ} quiz (${nbQuestions} questions).`);
   if (args.verifier) return;
 

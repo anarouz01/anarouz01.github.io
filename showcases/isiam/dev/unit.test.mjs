@@ -102,6 +102,15 @@ test('publier : noms affichés et ordre', () => {
   assert.equal(P.displayName('Semestre 1'), 'Semestre 1');
 });
 
+test('publier : rattachement quiz ↔ cours tolérant', () => {
+  const pdfs = ['01_Management', '02_Pensée_Managériale', '03 - La demande'];
+  assert.equal(P.linkQuiz('01_Quiz_Management', pdfs), '01_Management');
+  assert.equal(P.linkQuiz('02_Quiz_Pensée_Managériale', pdfs), '02_Pensée_Managériale');
+  assert.equal(P.linkQuiz('03 - La demande', pdfs), '03 - La demande');
+  assert.equal(P.linkQuiz('Annale 2025', pdfs), null);
+  assert.equal(P.displayName('02_Pensée_Managériale'), 'Pensée Managériale');
+});
+
 test('publier : lecture des quiz (QCM, ouverte, numéros à partir de 1)', () => {
   const r = P.parseQuiz(JSON.stringify({ titre: 'T', questions: [
     { q: 'Q1', choix: ['a', 'b', 'c'], reponses: [3, 1] },

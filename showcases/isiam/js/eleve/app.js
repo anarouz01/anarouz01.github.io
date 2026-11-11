@@ -14,6 +14,7 @@ import {
 import { createRouter } from '../router.js';
 import { setVendorBase, openPdf, mountViewer } from '../pdf-viewer.js';
 import { runQuiz } from '../quiz-ui.js';
+import { openShare } from '../share.js';
 import { buildMatiereQuiz, MATIERE_QUIZ_SIZE, scoreClass, formatNote } from '../quiz-engine.js';
 import { addAttempt, attemptsForQuiz, attemptsForMatiere, matiereStats } from '../history.js';
 
@@ -313,6 +314,17 @@ function quizStatsLine(q) {
   return { text: parts.join(' · '), done: att.length > 0, last: att[att.length - 1] };
 }
 
+// ---------- Partage des résultats ----------
+function shareQuiz(quiz) {
+  const loc = locateQuiz(idx, quiz.id);
+  openShare({ titre: quiz.titre, contexte: loc ? `${loc.matiere.nom} · ${loc.annee.nom}` : '', attempts: attemptsForQuiz(quiz.id) });
+}
+function shareMatiere(matiere) {
+  const loc = locateMatiere(idx, matiere.id);
+  openShare({ titre: `Quiz de la matière · ${matiere.nom}`, contexte: loc ? `${matiere.nom} · ${loc.annee.nom}` : matiere.nom, attempts: attemptsForMatiere(matiere.id).filter((a) => a.kind === 'matiere') });
+}
+const shareBtn = (onClick, label = 'Partager') => h('button', { type: 'button', class: 'btn', onClick }, icon('share'), h('span', null, label));
+
 function quizTab(matiere) {
   if (!matiere.quiz.length) return empty('Aucun quiz pour l\'instant.', 'quiz');
   const totalQ = matiere.quiz.reduce((s, q) => s + (q.nbQuestions || 0), 0);
@@ -324,7 +336,9 @@ function quizTab(matiere) {
         h('div', { class: 'card-title' }, 'Quiz de la matière'),
         h('div', { class: 'muted small' }, `${Math.min(MATIERE_QUIZ_SIZE, totalQ)} questions tirées au hasard dans tous les quiz, réparties entre les cours.`),
         lastM ? h('div', { class: 'tiny muted', style: { marginTop: '4px' } }, `Dernière tentative : ${formatNote(lastM.sur20)}/20 le ${fmtDate(lastM.date)}`) : null),
-      h('a', { class: 'btn primary', href: `#/qm/${matiere.id}` }, icon('play'), 'Commencer')));
+      h('div', { class: 'row' },
+        lastM ? h('button', { type: 'button', class: 'btn icon', title: 'Partager mes résultats', 'aria-label': 'Partager mes résultats du quiz de la matière', onClick: () => shareMatiere(matiere) }, icon('share')) : null,
+        h('a', { class: 'btn primary', href: `#/qm/${matiere.id}` }, icon('play'), 'Commencer'))));
 
   const groups = quizGroups(matiere).filter((g) => g.quiz.length);
   return h('div', null, hero, groups.map((g) => h('section', { style: { marginBottom: '24px' } },
@@ -333,10 +347,11 @@ function quizTab(matiere) {
       g.cours ? h('a', { class: 'btn sm ghost', href: `#/c/${g.cours.id}` }, icon('book'), 'Lire le cours') : null),
     h('div', { class: 'list' }, g.quiz.map((q) => {
       const st = quizStatsLine(q);
-      return h('a', { class: 'list-item', href: `#/q/${q.id}` },
-        h('span', { class: 'grow' }, h('span', { class: 'title' }, q.titre, ' ', draftBadge(q)), h('span', { class: 'sub' }, st.text)),
-        st.done ? h('span', { class: `badge ${scoreClass(st.last.sur20)}` }, `${formatNote(st.last.sur20)}/20`) : h('span', { class: 'badge' }, 'Jamais fait'),
-        icon('right'));
+      return h('div', { class: 'list-item course-row' },
+        h('a', { class: 'row-link', href: `#/q/${q.id}` },
+          h('span', { class: 'grow' }, h('span', { class: 'title' }, q.titre, ' ', draftBadge(q)), h('span', { class: 'sub' }, st.text)),
+          st.done ? h('span', { class: `badge ${scoreClass(st.last.sur20)}` }, `${formatNote(st.last.sur20)}/20`) : h('span', { class: 'badge' }, 'Jamais fait')),
+        st.done ? h('button', { type: 'button', class: 'btn icon sm share-btn', title: 'Partager mes résultats', 'aria-label': `Partager mes résultats : ${q.titre}`, onClick: () => shareQuiz(q) }, icon('share')) : null);
     })))));
 }
 
@@ -565,6 +580,7 @@ async function quizPage({ id }) {
         h('span', { class: 'muted small' }, `Quiz du cours « ${cours.titre} »`),
         h('button', { type: 'button', class: 'btn sm', onClick: () => { closeOverlay = openCoursOverlay(cours); } }, icon('book'), 'Revoir le cours')) : null,
       resultActions: () => [
+        !preview ? shareBtn(() => shareQuiz(quiz)) : null,
         next ? h('a', { class: 'btn', href: `#/c/${next.id}` }, h('span', null, 'Cours suivant'), icon('right')) : null,
         !next ? h('a', { class: 'btn', href: `#/qm/${matiere.id}` }, icon('play'), 'Quiz de la matière') : null,
       ],
@@ -608,6 +624,7 @@ async function quizMatierePage({ id }) {
       questions: buildMatiereQuiz(groups),
       regenerate: () => buildMatiereQuiz(groups),
       backLabel: 'Retour à la matière',
+      resultActions: () => [!preview ? shareBtn(() => shareMatiere(matiere)) : null],
       onGuard: quizGuard,
       onExit: () => { quizGuard(false); router.back(`/m/${matiere.id}/quiz`); },
       onFinish: (r) => {

@@ -144,6 +144,17 @@ function check(label, cond, extra = '') {
     const note = (await e.locator('.result-score').innerText()).replace(/\s+/g, ' ');
     check('Quiz : réponses JSON (numéros à partir de 1) correctement corrigées → 12,5/20', note.includes('12,5'), note);
     await shot(e, '18-eleve-resultat');
+    await e.click('button:has-text("Partager")');
+    await e.waitForSelector('.modal img.share-preview');
+    await e.waitForFunction(() => document.querySelector('img.share-preview').naturalWidth > 0);
+    const png = await e.evaluate(async () => {
+      const r = await fetch(document.querySelector('img.share-preview').src);
+      const b = new Uint8Array(await r.arrayBuffer());
+      let s = ''; for (const x of b) s += String.fromCharCode(x); return btoa(s);
+    });
+    fs.writeFileSync(path.join(SHOTS, '40-partage-apres-quiz.png'), Buffer.from(png, 'base64'));
+    check('Partage : image générée après le quiz', png.length > 10000);
+    await e.keyboard.press('Escape');
 
     await e.goto(`${BASE}/index.html#/`);
     await e.click('a.year-card:has-text("1re année")');
@@ -161,6 +172,32 @@ function check(label, cond, extra = '') {
     await e.click('a.tab:has-text("Liens")');
     await e.click('button:has-text("Regarder")');
     check('Liens : vidéo intégrée depuis liens.json', (await e.locator('.video-embed iframe').count()) === 1);
+
+    // ----- Partage a posteriori (plusieurs tentatives)
+    await e.goto(`${BASE}/index.html#/`);
+    await e.evaluate(() => {
+      const l = JSON.parse(localStorage.getItem('isiam.resultats'));
+      const a = l.find((x) => x.kind === 'quiz');
+      const d = (n) => new Date(Date.now() - n * 86400000).toISOString();
+      l.push({ ...a, sur20: 9, pct: 45, date: d(6) }, { ...a, sur20: 14.5, pct: 73, date: d(3) }, { ...a, sur20: 17, pct: 85, date: d(1) });
+      localStorage.setItem('isiam.resultats', JSON.stringify(l));
+    });
+    await e.click('a.year-card:has-text("1re année")');
+    await e.click('.semester .card:has-text("Marketing")');
+    await e.click('a.tab:has-text("Quiz")');
+    await e.click('.course-row:has-text("Quiz · Le mix marketing") .share-btn');
+    await e.waitForSelector('.modal img.share-preview');
+    await e.waitForFunction(() => document.querySelector('img.share-preview').naturalWidth > 0);
+    const png2 = await e.evaluate(async () => {
+      const r = await fetch(document.querySelector('img.share-preview').src);
+      const b = new Uint8Array(await r.arrayBuffer());
+      let s = ''; for (const x of b) s += String.fromCharCode(x); return btoa(s);
+    });
+    fs.writeFileSync(path.join(SHOTS, '41-partage-a-posteriori.png'), Buffer.from(png2, 'base64'));
+    await e.waitForTimeout(400);
+    await e.screenshot({ path: path.join(SHOTS, '42-modale-partage.png') });
+    check('Partage : a posteriori depuis la liste des quiz (4 tentatives)', (await e.locator('.modal img.share-preview').getAttribute('alt')).includes('4 tentatives'));
+    await e.keyboard.press('Escape');
 
     // ----- Navigation fluide
     await e.goto(`${BASE}/index.html#/`);

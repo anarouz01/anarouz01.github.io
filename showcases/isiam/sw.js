@@ -3,13 +3,13 @@
 // ce qui a déjà été ouvert. Réseau d'abord (toujours la dernière version en
 // ligne), cache en secours. 
 // ==========================================================================
-const VERSION = '2026-11-11.4';
+const VERSION = '2026-11-11.5';
 const CACHE = `isiam-${VERSION}`;
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest',
   'css/theme.css', 'css/components.css', 'css/pdf.css',
   'js/eleve/app.js', 'js/crypto.js', 'js/data.js', 'js/store.js', 'js/ui.js', 'js/router.js',
-  'js/pdf-viewer.js', 'js/quiz-ui.js', 'js/quiz-engine.js', 'js/history.js',
+  'js/pdf-viewer.js', 'js/quiz-ui.js', 'js/quiz-engine.js', 'js/history.js', 'js/share.js',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/apple-touch-icon.png',
 ];
 

@@ -194,7 +194,7 @@ function home(params, query) {
   let progress = null;
   if (selected) {
     const tabs = withMat.length > 1 ? h('div', { class: 'tabs', role: 'tablist' }, withMat.map((a) => h('a', {
-      class: 'tab', role: 'tab', 'aria-selected': String(a.id === selected.id), href: `#/?annee=${a.id}`,
+      class: 'tab', role: 'tab', 'aria-selected': String(a.id === selected.id), href: `#/?annee=${a.id}`, 'data-replace': '',
     }, a.nom))) : null;
     const rows = [];
     for (const s of selected.semestres) {
@@ -227,8 +227,19 @@ function home(params, query) {
     ];
   }
 
+  const last = lastCours();
+  const lastLoc = last && locateCours(idx, last.id);
+  const resume = lastLoc ? h('a', { class: 'card link resume-card', href: `#/c/${lastLoc.cours.id}` },
+    h('span', { class: 'year-num' }, icon('book')),
+    h('span', { class: 'grow' },
+      h('span', { class: 'tiny muted', style: { display: 'block' } }, 'Reprendre la lecture'),
+      h('span', { class: 'card-title', style: { display: 'block' } }, lastLoc.cours.titre),
+      h('span', { class: 'small muted' }, `${lastLoc.matiere.nom} · ${lastLoc.annee.nom}`)),
+    icon('right')) : null;
+
   setView(
     h('div', { class: 'page-head' }, h('h1', null, 'Mes révisions'), h('p', { class: 'muted' }, 'Choisissez une année pour accéder aux cours et aux quiz.')),
+    resume,
     yearCards,
     progress,
   );
@@ -275,7 +286,7 @@ function matierePage({ id, tab = 'cours' }) {
     crumbs([{ label: 'Accueil', href: '#/' }, { label: annee.nom, href: `#/a/${annee.id}` }, { label: matiere.nom }]),
     h('div', { class: 'page-head' }, h('h1', null, matiere.nom, ' ', draftBadge(matiere)), h('p', { class: 'muted' }, `${semestre.nom} · ${annee.nom}`)),
     h('div', { class: 'tabs', role: 'tablist' }, tabs.map(([k, label, n, ic]) => h('a', {
-      class: 'tab', role: 'tab', 'aria-selected': String(k === tab), href: `#/m/${matiere.id}/${k}`,
+      class: 'tab', role: 'tab', 'aria-selected': String(k === tab), href: `#/m/${matiere.id}/${k}`, 'data-replace': '',
     }, icon(ic), label, h('span', { class: 'count' }, String(n))))),
     body,
   );
@@ -284,10 +295,19 @@ function matierePage({ id, tab = 'cours' }) {
 function coursTab(matiere) {
   const list = sorted(matiere.cours);
   if (!list.length) return empty('Aucun cours pour l\'instant.', 'book');
-  return h('div', { class: 'list' }, list.map((c, i) => h('a', { class: 'list-item', href: `#/c/${c.id}` },
-    h('span', { class: 'list-num' }, String(i + 1)),
-    h('span', { class: 'grow' }, h('span', { class: 'title' }, c.titre, ' ', draftBadge(c)), h('span', { class: 'sub' }, c.pages ? plural(c.pages, 'page', 'pages') : 'PDF')),
-    icon('right'))));
+  return h('div', { class: 'list' }, list.map((c, i) => {
+    const qs = quizzesOf(matiere, c);
+    return h('div', { class: 'list-item course-row' },
+      h('a', { class: 'row-link', href: `#/c/${c.id}` },
+        h('span', { class: 'list-num' }, String(i + 1)),
+        h('span', { class: 'grow' }, h('span', { class: 'title' }, c.titre, ' ', draftBadge(c)),
+          h('span', { class: 'sub' }, [c.pages ? plural(c.pages, 'page', 'pages') : 'PDF', qs.length ? plural(qs.length, 'quiz', 'quiz') : null].filter(Boolean).join(' · ')))),
+      qs.length ? (() => {
+        const best = bestNote(qs[0]);
+        return h('a', { class: 'btn sm', href: `#/q/${qs[0].id}`, title: `Quiz : ${qs[0].titre}` }, icon('quiz'), h('span', null, 'Quiz'),
+          best !== null ? h('span', { class: `badge ${scoreClass(best)}` }, `${formatNote(best)}/20`) : null);
+      })() : null);
+  }));
 }
 
 function quizStatsLine(q) {
@@ -315,7 +335,9 @@ function quizTab(matiere) {
 
   const groups = quizGroups(matiere).filter((g) => g.quiz.length);
   return h('div', null, hero, groups.map((g) => h('section', { style: { marginBottom: '24px' } },
-    h('h3', { class: 'muted' }, g.cours ? g.cours.titre : 'Quiz sur toute la matière'),
+    h('div', { class: 'row between group-head' },
+      h('h3', { class: 'muted', style: { margin: 0 } }, g.cours ? g.cours.titre : 'Quiz sur toute la matière'),
+      g.cours ? h('a', { class: 'btn sm ghost', href: `#/c/${g.cours.id}` }, icon('book'), 'Lire le cours') : null),
     h('div', { class: 'list' }, g.quiz.map((q) => {
       const st = quizStatsLine(q);
       return h('a', { class: 'list-item', href: `#/q/${q.id}` },
@@ -350,6 +372,41 @@ function liensTab(matiere) {
 }
 
 // ---------------------------------------------------------------------------
+// Cours : lecteur, navigation entre cours, accès au quiz du cours
+const LAST_KEY = 'isiam.dernierCours';
+function rememberCours(id) {
+  try { localStorage.setItem(LAST_KEY, JSON.stringify({ id, date: new Date().toISOString() })); } catch { /* ignoré */ }
+}
+function lastCours() {
+  try { return JSON.parse(localStorage.getItem(LAST_KEY) || 'null'); } catch { return null; }
+}
+
+/** Octets déchiffrés des derniers cours ouverts (évite de retélécharger en passant cours ↔ quiz). */
+const coursCache = new Map();
+async function coursBytes(cours) {
+  const k = `${cours.id}:${cours.v}`;
+  if (coursCache.has(k)) return coursCache.get(k);
+  const bytes = await data.cours(key, cours);
+  coursCache.set(k, bytes);
+  while (coursCache.size > 4) coursCache.delete(coursCache.keys().next().value);
+  return bytes;
+}
+
+const quizzesOf = (matiere, cours) => (matiere.quiz || []).filter((q) => q.coursId === cours.id);
+
+function bestNote(q) {
+  const att = attemptsForQuiz(q.id);
+  return att.length ? att.reduce((m, a) => Math.max(m, a.sur20), 0) : null;
+}
+
+/** Bouton vers un quiz, avec la meilleure note obtenue. */
+function quizButton(q, { primary = false, label } = {}) {
+  const best = bestNote(q);
+  return h('a', { class: `btn ${primary ? 'primary' : ''}`, href: `#/q/${q.id}` },
+    icon('quiz'), h('span', null, label || 'Faire le quiz'),
+    best !== null ? h('span', { class: `badge ${scoreClass(best)}` }, `${formatNote(best)}/20`) : null);
+}
+
 async function coursPage({ id }) {
   const loc = locateCours(idx, id);
   if (!loc) return notFound();
@@ -358,38 +415,74 @@ async function coursPage({ id }) {
   const i = list.findIndex((c) => c.id === id);
   const prev = list[i - 1];
   const next = list[i + 1];
+  const quizzes = quizzesOf(matiere, cours);
+  rememberCours(id);
 
-  const pagesBox = h('div', { class: 'pdf-pages' }, loader('Déchiffrement du cours…'));
-  const zoomVal = h('span', { class: 'zoom-val' }, '100 %');
+  // Sélecteur de cours : passer directement à un autre chapitre de la matière.
+  const picker = h('select', { class: 'select course-picker', 'aria-label': 'Aller à un autre cours de la matière' },
+    list.map((c, k) => h('option', { value: c.id, selected: c.id === id }, `${k + 1}. ${c.titre}`)));
+  picker.addEventListener('change', () => router.go(`/c/${picker.value}`, { replace: true }));
+
+  const pageInfo = h('span', { class: 'zoom-val', 'aria-live': 'polite' }, '');
+  const zoomVal = h('span', { class: 'zoom-val hide-mobile' }, '100 %');
   const btnMinus = h('button', { type: 'button', class: 'btn icon', 'aria-label': 'Dézoomer', disabled: true }, icon('zoomOut'));
   const btnPlus = h('button', { type: 'button', class: 'btn icon', 'aria-label': 'Zoomer', disabled: true }, icon('zoomIn'));
-  const btnFit = h('button', { type: 'button', class: 'btn sm', disabled: true }, 'Ajuster');
-  const btnDl = h('button', { type: 'button', class: 'btn sm', disabled: true }, icon('download'), h('span', { class: 'hide-mobile' }, 'Télécharger le PDF'));
+  const btnDl = h('button', { type: 'button', class: 'btn icon', 'aria-label': 'Télécharger le PDF', title: 'Télécharger le PDF', disabled: true }, icon('download'));
+  const navBtn = (c, dir) => (c
+    ? h('a', { class: 'btn icon', href: `#/c/${c.id}`, 'data-replace': '', title: `${dir < 0 ? 'Cours précédent' : 'Cours suivant'} : ${c.titre}`, 'aria-label': dir < 0 ? 'Cours précédent' : 'Cours suivant' }, icon(dir < 0 ? 'left' : 'right'))
+    : h('button', { type: 'button', class: 'btn icon', disabled: true, 'aria-label': dir < 0 ? 'Pas de cours précédent' : 'Pas de cours suivant' }, icon(dir < 0 ? 'left' : 'right')));
+
+  const pagesBox = h('div', { class: 'pdf-pages' }, loader('Déchiffrement du cours…'));
+
+  // Fin du cours : enchaîner sur le quiz, puis sur le cours suivant.
+  const endCard = h('section', { class: 'card end-card' },
+    h('div', { class: 'card-title' }, 'Fin du cours'),
+    h('p', { class: 'muted small' }, quizzes.length ? 'Vérifiez ce que vous avez retenu, puis passez au cours suivant.' : 'Passez au cours suivant ou testez-vous sur toute la matière.'),
+    h('div', { class: 'row' },
+      quizzes.map((q, k) => quizButton(q, { primary: k === 0, label: quizzes.length > 1 ? q.titre : `Faire le quiz (${plural(q.nbQuestions || 0, 'question', 'questions')})` })),
+      next ? h('a', { class: `btn ${quizzes.length ? '' : 'primary'}`, href: `#/c/${next.id}`, 'data-replace': '' }, h('span', null, `Cours suivant : ${next.titre}`), icon('right')) : null,
+      !next && matiere.quiz.length ? h('a', { class: 'btn', href: `#/qm/${matiere.id}` }, icon('play'), 'Quiz de la matière') : null));
 
   setView(
     crumbs([{ label: 'Accueil', href: '#/' }, { label: annee.nom, href: `#/a/${annee.id}` }, { label: matiere.nom, href: `#/m/${matiere.id}` }, { label: cours.titre }]),
-    h('div', { class: 'page-head' }, h('h1', null, cours.titre, ' ', draftBadge(cours)), h('p', { class: 'muted' }, `${matiere.nom} · cours ${i + 1} sur ${list.length}`)),
-    h('div', { class: 'viewer-bar' }, btnMinus, zoomVal, btnPlus, btnFit, h('span', { class: 'grow' }), btnDl),
+    h('div', { class: 'page-head row between', style: { alignItems: 'flex-end' } },
+      h('div', { class: 'grow' }, h('h1', null, cours.titre), h('p', { class: 'muted' }, `${matiere.nom} · cours ${i + 1} sur ${list.length}`)),
+      quizzes.length ? quizButton(quizzes[0], { primary: true, label: quizzes.length > 1 ? 'Quiz du cours' : 'Faire le quiz' }) : null),
+    list.length > 1 ? picker : null,
+    h('div', { class: 'viewer-bar' },
+      navBtn(prev, -1), pageInfo, navBtn(next, 1),
+      h('span', { class: 'bar-sep' }),
+      btnMinus, zoomVal, btnPlus,
+      h('span', { class: 'grow' }),
+      btnDl),
     pagesBox,
-    h('nav', { class: 'pdf-nav' },
-      prev ? h('a', { class: 'btn', href: `#/c/${prev.id}` }, icon('left'), h('span', null, prev.titre)) : h('span'),
-      next ? h('a', { class: 'btn', href: `#/c/${next.id}` }, h('span', null, next.titre), icon('right')) : h('a', { class: 'btn', href: `#/m/${matiere.id}/quiz` }, 'Quiz de la matière', icon('right'))),
+    endCard,
   );
+
+  // Flèches du clavier : cours précédent / suivant.
+  const onKey = (e) => {
+    if (e.target.closest('input, select, textarea') || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.key === 'ArrowLeft' && prev) router.go(`/c/${prev.id}`, { replace: true });
+    if (e.key === 'ArrowRight' && next) router.go(`/c/${next.id}`, { replace: true });
+  };
+  document.addEventListener('keydown', onKey);
 
   let viewer = null;
   let alive = true;
-  cleanup = () => { alive = false; if (viewer) viewer.destroy(); };
+  cleanup = () => { alive = false; document.removeEventListener('keydown', onKey); if (viewer) viewer.destroy(); };
   try {
-    const bytes = await data.cours(key, cours);
+    const bytes = await coursBytes(cours);
     if (!alive) return;
     const pdf = await openPdf(bytes);
     if (!alive) { pdf.destroy(); return; }
     clear(pagesBox);
-    viewer = await mountViewer(pagesBox, pdf, { onZoom: (z) => { zoomVal.textContent = `${Math.round(z * 100)} %`; } });
-    btnMinus.disabled = btnPlus.disabled = btnFit.disabled = btnDl.disabled = false;
+    viewer = await mountViewer(pagesBox, pdf, {
+      onZoom: (z) => { zoomVal.textContent = `${Math.round(z * 100)} %`; },
+      onPage: (p, n) => { pageInfo.textContent = `${p} / ${n}`; },
+    });
+    btnMinus.disabled = btnPlus.disabled = btnDl.disabled = false;
     btnMinus.onclick = () => viewer.setZoom(viewer.zoom - 0.25);
     btnPlus.onclick = () => viewer.setZoom(viewer.zoom + 0.25);
-    btnFit.onclick = () => viewer.setZoom(1);
     btnDl.onclick = () => downloadBytes(bytes, `${safeFilename(cours.titre)}.pdf`);
   } catch (e) {
     if (!alive) return;
@@ -397,7 +490,50 @@ async function coursPage({ id }) {
   }
 }
 
+/** Cours en surimpression (depuis un quiz) : se ferme sans perdre les réponses en cours. */
+function openCoursOverlay(cours) {
+  let viewer = null;
+  let closed = false;
+  const pagesBox = h('div', { class: 'pdf-pages' }, loader('Déchiffrement du cours…'));
+  const scroller = h('div', { class: 'sheet-body' }, pagesBox);
+  const pageInfo = h('span', { class: 'zoom-val' }, '');
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    if (viewer) viewer.destroy();
+    back.remove();
+    document.removeEventListener('keydown', onKey);
+    document.body.style.overflow = '';
+  };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  const back = h('div', { class: 'modal-backdrop sheet-backdrop', role: 'dialog', 'aria-modal': 'true', 'aria-label': cours.titre },
+    h('div', { class: 'sheet' },
+      h('div', { class: 'sheet-head' },
+        h('div', { class: 'grow' }, h('div', { class: 'card-title' }, cours.titre), h('div', { class: 'tiny muted' }, 'Vos réponses au quiz sont conservées.')),
+        pageInfo,
+        h('button', { type: 'button', class: 'btn primary', onClick: close }, icon('close'), h('span', null, 'Retour au quiz'))),
+      scroller));
+  back.addEventListener('mousedown', (e) => { if (e.target === back) close(); });
+  document.addEventListener('keydown', onKey);
+  document.body.append(back);
+  document.body.style.overflow = 'hidden';
+  (async () => {
+    try {
+      const bytes = await coursBytes(cours);
+      if (closed) return;
+      const pdf = await openPdf(bytes);
+      if (closed) { pdf.destroy(); return; }
+      clear(pagesBox);
+      viewer = await mountViewer(pagesBox, pdf, { scrollRoot: scroller, onPage: (p, n) => { pageInfo.textContent = `${p} / ${n}`; } });
+    } catch (e) {
+      if (!closed) clear(pagesBox).append(h('div', { class: 'notice bad' }, e.message));
+    }
+  })();
+  return close;
+}
+
 // ---------------------------------------------------------------------------
+// Quiz
 function quizGuard(active) {
   if (!router) return;
   if (active) router.setGuard(() => window.confirm('Quitter le quiz ? Vos réponses ne seront pas enregistrées.'));
@@ -408,10 +544,19 @@ async function quizPage({ id }) {
   const loc = locateQuiz(idx, id);
   if (!loc) return notFound();
   const { annee, matiere, quiz } = loc;
+  const list = sorted(matiere.cours);
+  const cours = quiz.coursId ? list.find((c) => c.id === quiz.coursId) : null;
+  const next = cours ? list[list.indexOf(cours) + 1] : null;
   const box = h('div', null, loader('Chargement du quiz…'));
-  setView(crumbs([{ label: 'Accueil', href: '#/' }, { label: annee.nom, href: `#/a/${annee.id}` }, { label: matiere.nom, href: `#/m/${matiere.id}/quiz` }, { label: quiz.titre }]), box);
+  setView(crumbs([
+    { label: 'Accueil', href: '#/' }, { label: annee.nom, href: `#/a/${annee.id}` }, { label: matiere.nom, href: `#/m/${matiere.id}/quiz` },
+    cours ? { label: cours.titre, href: `#/c/${cours.id}` } : null,
+    { label: quiz.titre },
+  ].filter(Boolean)), box);
   let alive = true;
-  cleanup = () => { alive = false; quizGuard(false); };
+  let closeOverlay = null;
+  cleanup = () => { alive = false; quizGuard(false); if (closeOverlay) closeOverlay(); };
+  const parent = cours ? `/c/${cours.id}` : `/m/${matiere.id}/quiz`;
   try {
     const content = await data.quiz(key, quiz);
     if (!alive) return;
@@ -422,9 +567,16 @@ async function quizPage({ id }) {
     runQuiz(box, {
       titre: quiz.titre,
       questions: content.questions,
-      backLabel: 'Retour à la matière',
+      backLabel: cours ? 'Retour au cours' : 'Retour à la matière',
+      headerExtra: cours ? () => h('div', { class: 'row', style: { marginTop: '4px' } },
+        h('span', { class: 'muted small' }, `Quiz du cours « ${cours.titre} »`),
+        h('button', { type: 'button', class: 'btn sm', onClick: () => { closeOverlay = openCoursOverlay(cours); } }, icon('book'), 'Revoir le cours')) : null,
+      resultActions: () => [
+        next ? h('a', { class: 'btn', href: `#/c/${next.id}` }, h('span', null, 'Cours suivant'), icon('right')) : null,
+        !next ? h('a', { class: 'btn', href: `#/qm/${matiere.id}` }, icon('play'), 'Quiz de la matière') : null,
+      ],
       onGuard: quizGuard,
-      onExit: () => { quizGuard(false); router.go(`/m/${matiere.id}/quiz`); },
+      onExit: () => { quizGuard(false); router.back(parent); },
       onFinish: (r) => {
         if (preview) return;
         addAttempt({ kind: 'quiz', quizId: quiz.id, matiereId: matiere.id, titre: quiz.titre, points: r.points, total: r.total, sur20: r.sur20, pct: r.pct });
@@ -464,7 +616,7 @@ async function quizMatierePage({ id }) {
       regenerate: () => buildMatiereQuiz(groups),
       backLabel: 'Retour à la matière',
       onGuard: quizGuard,
-      onExit: () => { quizGuard(false); router.go(`/m/${matiere.id}/quiz`); },
+      onExit: () => { quizGuard(false); router.back(`/m/${matiere.id}/quiz`); },
       onFinish: (r) => {
         if (preview) return;
         addAttempt({ kind: 'matiere', matiereId: matiere.id, titre: `Quiz de la matière · ${matiere.nom}`, points: r.points, total: r.total, sur20: r.sur20, pct: r.pct });

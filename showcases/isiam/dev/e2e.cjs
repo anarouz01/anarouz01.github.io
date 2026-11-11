@@ -101,10 +101,10 @@ function check(label, cond, extra = '') {
     await e.waitForSelector('.year-card');
     check('Élève : mot de passe mémorisé', true);
     await shot(e, '11-eleve-accueil');
-    await e.click('a.card:has-text("1re année")');
+    await e.click('a.year-card:has-text("1re année")');
     await e.waitForSelector('.semester');
     check('Élève : matières visibles (dossiers vides compris)', (await e.locator('.semester .card').count()) === 3);
-    await e.click('.card:has-text("Marketing")');
+    await e.click('.semester .card:has-text("Marketing")');
     await e.waitForSelector('.list-item');
     const titles = await e.locator('.list-item .title').allInnerTexts();
     check('Élève : cours triés, préfixe retiré, brouillon absent', titles.join('|') === 'Le mix marketing|La segmentation', titles.join(' | '));
@@ -117,8 +117,8 @@ function check(label, cond, extra = '') {
     await shot(e, '14-eleve-cours');
 
     await e.goto(`${BASE}/index.html#/`);
-    await e.click('a.card:has-text("1re année")');
-    await e.click('.card:has-text("Marketing")');
+    await e.click('a.year-card:has-text("1re année")');
+    await e.click('.semester .card:has-text("Marketing")');
     await e.click('a.tab:has-text("Quiz")');
     await e.waitForSelector('.list-item:has-text("Quiz · Le mix marketing")');
     check('Élève : quiz lié au cours / quiz de matière', (await e.locator('h3:has-text("Le mix marketing")').count()) === 1 && (await e.locator('h3:has-text("toute la matière")').count()) === 1);
@@ -146,8 +146,8 @@ function check(label, cond, extra = '') {
     await shot(e, '18-eleve-resultat');
 
     await e.goto(`${BASE}/index.html#/`);
-    await e.click('a.card:has-text("1re année")');
-    await e.click('.card:has-text("Marketing")');
+    await e.click('a.year-card:has-text("1re année")');
+    await e.click('.semester .card:has-text("Marketing")');
     await e.click('a.tab:has-text("Quiz")');
     await e.click('a:has-text("Commencer")');
     await e.waitForSelector('.quiz-counter');
@@ -156,11 +156,51 @@ function check(label, cond, extra = '') {
     await e.goto(`${BASE}/index.html#/`);
     await e.waitForSelector('table.table');
     check('Accueil : progression', (await e.locator('table.table tbody').innerText()).includes('12,5/20'));
-    await e.click('a.card:has-text("1re année")');
-    await e.click('.card:has-text("Marketing")');
+    await e.click('a.year-card:has-text("1re année")');
+    await e.click('.semester .card:has-text("Marketing")');
     await e.click('a.tab:has-text("Liens")');
     await e.click('button:has-text("Regarder")');
     check('Liens : vidéo intégrée depuis liens.json', (await e.locator('.video-embed iframe').count()) === 1);
+
+    // ----- Navigation fluide
+    await e.goto(`${BASE}/index.html#/`);
+    await e.waitForSelector('.resume-card');
+    check('Accueil : « Reprendre la lecture » propose le dernier cours', (await e.locator('.resume-card').innerText()).includes('Le mix marketing'));
+    await e.click('a.year-card:has-text("1re année")');
+    await e.click('.semester .card:has-text("Marketing")');
+    await e.waitForSelector('.course-row');
+    check('Matière : bouton Quiz sur la ligne du cours', (await e.locator('.course-row:has-text("Le mix marketing") a.btn:has-text("Quiz")').count()) === 1);
+    await e.click('a.tab:has-text("Liens")');
+    await e.click('a.tab:has-text("Cours")');
+    await e.click('.course-row:has-text("Le mix marketing") .row-link');
+    await e.waitForSelector('.pdf-page canvas', { timeout: 15000 });
+    check('Cours : bouton « Faire le quiz »', (await e.locator('.page-head a.btn:has-text("Faire le quiz")').count()) === 1);
+    check('Cours : bloc de fin avec quiz et cours suivant', (await e.locator('.end-card a:has-text("Cours suivant")').count()) === 1);
+    await e.click('.viewer-bar a[aria-label="Cours suivant"]');
+    await e.waitForSelector('h1:has-text("La segmentation")');
+    await e.goBack();
+    await e.waitForSelector('.course-row');
+    check('Retour arrière : cours suivant puis Retour → matière (pas le cours précédent)', true);
+    check('Retour arrière : les onglets ne s\'empilent pas', (await e.locator('a.tab[aria-selected="true"]').innerText()).includes('Cours'));
+    await e.goBack();
+    await e.waitForSelector('.semester');
+    check('Retour arrière : matière → année', true);
+    await e.goForward();
+    await e.waitForSelector('.course-row');
+    await e.click('.course-row:has-text("Le mix marketing") a.btn:has-text("Quiz")');
+    await e.waitForSelector('.question-card');
+    await e.locator('.choice').first().locator('input').check();
+    await e.click('button:has-text("Revoir le cours")');
+    await e.waitForSelector('.sheet .pdf-page canvas', { timeout: 15000 });
+    await e.screenshot({ path: path.join(SHOTS, '30-quiz-revoir-cours.png') });
+    await e.click('.sheet button:has-text("Retour au quiz")');
+    check('Quiz : « Revoir le cours » sans perdre les réponses', (await e.locator('.choice input:checked').count()) === 1 && (await e.locator('.sheet').count()) === 0);
+    await e.click('.crumbs a:has-text("Le mix marketing"), .back-link');
+    await e.waitForSelector('h1:has-text("Le mix marketing")');
+    check('Quiz : retour (confirmé) vers le cours', true);
+    await e.waitForSelector('.pdf-page canvas', { timeout: 15000 });
+    await e.waitForTimeout(500);
+    await e.screenshot({ path: path.join(SHOTS, '31-cours-mobile.png') });
 
     // ----- Mise à jour des contenus : nouveau cours, quiz modifié, cours supprimé
     fs.copyFileSync(PDF2, path.join(M, '03 - Le positionnement.pdf'));
@@ -174,8 +214,8 @@ function check(label, cond, extra = '') {
     await e.goto(`${BASE}/index.html#/`);
     await e.reload();
     await e.waitForSelector('.year-card');
-    await e.click('a.card:has-text("1re année")');
-    await e.click('.card:has-text("Marketing")');
+    await e.click('a.year-card:has-text("1re année")');
+    await e.click('.semester .card:has-text("Marketing")');
     await e.waitForSelector('.list-item');
     const t2 = await e.locator('.list-item .title').allInnerTexts();
     check('Élève : mise à jour visible', t2.join('|') === 'Le mix marketing|Le positionnement', t2.join(' | '));

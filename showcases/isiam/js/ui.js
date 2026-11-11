@@ -56,6 +56,7 @@ const ICONS = {
   download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+  menu: '<path d="M4 6h16M4 12h16M4 18h10"/>',
   book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5z"/><path d="M4 19a2 2 0 0 1 2-2h13"/>',
   quiz: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><path d="M12 17.5v.01"/>',
   link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
@@ -67,6 +68,7 @@ const ICONS = {
   copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
   file: '<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/>',
   check: '<path d="M5 12l5 5 9-10"/>',
+  close: '<path d="M6 6l12 12M18 6L6 18"/>',
   folder: '<path d="M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/>',
 };
 
@@ -234,13 +236,19 @@ export function plural(n, one, many) {
   return `${n} ${n > 1 ? many : one}`;
 }
 
+/**
+ * Fil d'Ariane. Les liens « remontent » (data-up) : si la page parente est la page
+ * précédente, on revient simplement en arrière. Sur mobile, seul un lien « ‹ Parent » s'affiche.
+ */
 export function crumbs(items) {
   const out = h('nav', { class: 'crumbs', 'aria-label': 'Fil d\'Ariane' });
   items.forEach((it, i) => {
     if (i) out.append(h('span', { class: 'sep', 'aria-hidden': 'true' }, '›'));
-    out.append(it.href ? h('a', { href: it.href }, it.label) : h('span', { 'aria-current': 'page' }, it.label));
+    out.append(it.href ? h('a', { href: it.href, 'data-up': '' }, it.label) : h('span', { 'aria-current': 'page' }, it.label));
   });
-  return out;
+  const parent = [...items].reverse().find((it) => it.href);
+  const back = parent ? h('a', { class: 'back-link', href: parent.href, 'data-up': '' }, icon('left'), h('span', null, parent.label)) : null;
+  return h('div', { class: 'nav-head' }, back, out);
 }
 
 export function downloadBytes(bytes, filename, type = 'application/pdf') {

@@ -68,7 +68,7 @@ export function runQuiz(root, opts) {
 
     const last = current === n - 1;
     root.append(
-      h('div', { class: 'page-head' }, h('h1', null, titre)),
+      h('div', { class: 'page-head' }, h('h1', null, titre), opts.headerExtra ? opts.headerExtra() : null),
       h('div', { class: 'quiz-head' }, progress, h('span', { class: 'quiz-counter' }, `Question ${current + 1} / ${n}`)),
       h('div', { class: 'card question-card' },
         h('div', { class: 'question-type' }, q.type === 'qcm'
@@ -198,8 +198,9 @@ export function runQuiz(root, opts) {
         h('div', { class: 'result-score' }, formatNote(result.sur20), h('small', null, ' / 20')),
         h('div', { class: 'result-pct' }, `${result.pct} % · ${formatNote(result.points)} point${result.points > 1 ? 's' : ''} sur ${result.total}`),
         h('div', { class: `progress ${cls}`, style: { maxWidth: '320px', margin: '16px auto 0' } }, h('span', { style: { width: `${result.pct}%` } })),
-        h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '24px' } },
+        h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '24px', flexWrap: 'wrap' } },
           h('button', { type: 'button', class: 'btn primary', onClick: restart }, icon('refresh'), 'Recommencer'),
+          opts.resultActions ? opts.resultActions(result) : null,
           opts.onExit ? h('button', { type: 'button', class: 'btn', onClick: () => opts.onExit() }, opts.backLabel || 'Retour') : null)),
       h('h2', { style: { marginTop: '32px' } }, 'Correction détaillée'),
       h('div', { class: 'card' }, review),

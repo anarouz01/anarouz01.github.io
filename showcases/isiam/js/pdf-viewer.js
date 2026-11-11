@@ -48,7 +48,7 @@ export async function renderThumb(pdf, pageNo = 1, width = 240) {
  * Monte le lecteur dans `container`. Renvoie { setZoom, zoom, destroy }.
  * zoom = 1 → largeur ajustée à l'écran (900 px max sur grand écran).
  */
-export async function mountViewer(container, pdf, { onZoom } = {}) {
+export async function mountViewer(container, pdf, { onZoom, onPage, scrollRoot = window } = {}) {
   const pdfjs = await loadPdfJs();
   const pages = [];
   for (let i = 1; i <= pdf.numPages; i++) {
@@ -133,7 +133,30 @@ export async function mountViewer(container, pdf, { onZoom } = {}) {
 
   layout();
 
+  // Page courante (celle qui occupe le milieu de l'écran), pour l'indicateur « Page 3 / 8 ».
+  let current = 0;
+  let ticking = false;
+  const track = () => {
+    ticking = false;
+    const mid = window.innerHeight / 2;
+    let best = 1;
+    for (const p of pages) {
+      const r = p.el.getBoundingClientRect();
+      if (r.top <= mid) best = p.no; else break;
+    }
+    if (best !== current) { current = best; if (onPage) onPage(current, pages.length); }
+  };
+  const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(track); } };
+  scrollRoot.addEventListener('scroll', onScroll, { passive: true });
+  track();
+
   return {
+    get page() { return current; },
+    get pages() { return pages.length; },
+    scrollToPage(n) {
+      const p = pages[Math.max(0, Math.min(pages.length - 1, n - 1))];
+      if (p) p.el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    },
     get zoom() { return zoom; },
     setZoom(z) {
       zoom = Math.max(0.5, Math.min(3, Math.round(z * 100) / 100));
@@ -141,6 +164,7 @@ export async function mountViewer(container, pdf, { onZoom } = {}) {
       if (onZoom) onZoom(zoom);
     },
     destroy() {
+      scrollRoot.removeEventListener('scroll', onScroll);
       io.disconnect();
       ro.disconnect();
       pages.forEach((p) => { if (p.task) try { p.task.cancel(); } catch { /* ignoré */ } });

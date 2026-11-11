@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "algo": "AES-GCM-256/PBKDF2-SHA-256",
+  "salt": "U5e1G9vOBflDoBST0FIAdw==",
+  "iterations": 600000,
+  "check": "bql6032DGGEJCej3lKkzFb8XajwOGGpYW4NTiqD5pelNQSWq"
+}

@@ -1,9 +1,9 @@
 // ==========================================================================
 // Service worker : rend le site installable et utilisable hors connexion pour
 // ce qui a déjà été ouvert. Réseau d'abord (toujours la dernière version en
-// ligne), cache en secours. L'administration n'est jamais mise en cache.
+// ligne), cache en secours. 
 // ==========================================================================
-const VERSION = '2026-11-11.1';
+const VERSION = '2026-11-11.2';
 const CACHE = `isiam-${VERSION}`;
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest',
@@ -30,7 +30,7 @@ self.addEventListener('fetch', (e) => {
   if (url.origin !== location.origin) return;
   const scope = new URL(self.registration.scope);
   const rel = url.pathname.slice(scope.pathname.length);
-  if (rel.startsWith('gestion-') || rel.startsWith('dev/')) return; // admin et outils : jamais en cache
+  if (rel.startsWith('dev/')) return; // outils de développement : jamais en cache
 
   // PDF.js : fichiers figés → cache d'abord.
   if (rel.startsWith('vendor/')) {

@@ -3,10 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node dev/mock-github.mjs",
+    "publier": "node publier.mjs",
+    "verifier": "node publier.mjs --verifier",
+    "dev": "node dev/serve.mjs",
     "test": "node --test dev/unit.test.mjs",
-    "test:pdf": "node dev/make-test-pdfs.cjs",
     "test:e2e": "node dev/make-test-pdfs.cjs && node dev/e2e.cjs"
   },
-  "description": "Site de révision ISIAM : cours PDF et quiz chiffrés, hébergés sur GitHub Pages"
+  "description": "Site de révision ISIAM : cours PDF et quiz chiffrés par publier.mjs, servis par GitHub Pages"
 }

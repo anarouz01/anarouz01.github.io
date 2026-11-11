@@ -19,7 +19,7 @@ import { addAttempt, attemptsForQuiz, attemptsForMatiere, matiereStats, clearHis
 
 const app = document.getElementById('app');
 const data = new PublishedData('');
-const preview = new URLSearchParams(location.search).has('apercu');
+const preview = false; // les brouillons (préfixe « _ ») ne sont jamais publiés
 
 let config = null;
 let key = null;
@@ -42,8 +42,8 @@ async function boot() {
   } catch (e) {
     return fatal(e.message);
   }
-  if (!config) return fatal('Le site n\'a pas encore été initialisé par l\'administrateur.');
-  key = (await loadKey('eleve')) || (await loadKey('admin'));
+  if (!config) return fatal('Aucun contenu n\'a encore été publié.');
+  key = await loadKey('eleve');
   if (key && (await verifyKey(key, config))) return start();
   const hadKey = !!key;
   if (key) await forgetKey('eleve');
@@ -138,7 +138,6 @@ function renderShell() {
   view = h('main', { id: 'view', class: 'container' });
   const menu = h('button', { type: 'button', class: 'btn icon ghost', title: 'Se déconnecter', 'aria-label': 'Se déconnecter de cet appareil', onClick: logout }, icon('logout'));
   put(clear(app),
-    preview ? h('div', { class: 'preview-banner' }, 'Aperçu administrateur : les brouillons sont visibles et les scores ne sont pas enregistrés.') : null,
     h('header', { class: 'topbar' }, h('div', { class: 'topbar-inner' },
       h('a', { class: 'brand', href: '#/' }, brandMark(), h('span', null, 'Révisions')),
       h('span', { class: 'topbar-spacer' }),

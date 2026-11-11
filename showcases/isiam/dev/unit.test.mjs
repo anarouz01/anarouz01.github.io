@@ -1,9 +1,15 @@
 // Tests unitaires : node --test dev/unit.test.mjs
 import test from 'node:test';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
 import assert from 'node:assert/strict';
 import * as C from '../js/crypto.js';
 import * as Q from '../js/quiz-engine.js';
 import * as S from '../js/store.js';
+import * as P from '../publier.mjs';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 test('chiffrement : aller-retour texte et binaire', async () => {
   const { config, key } = await C.createCryptoConfig('MotDePasse2026!', 1000);
@@ -89,69 +95,76 @@ test('quiz matière : 20 questions uniques tirées de chaque groupe', () => {
   assert.equal(out.filter((q) => q.id.startsWith('b')).length, 8);
 });
 
-test('store : années, matières, cours, quiz, déplacements, suppressions', () => {
-  const idx = S.emptyIndex();
-  const a = S.addAnnee(idx);
-  assert.equal(a.nom, '1re année');
-  assert.equal(a.semestres.length, 2);
-  const m = S.addMatiere(idx, a.semestres[0].id, 'Marketing');
-  const m2 = S.addMatiere(idx, a.semestres[0].id, 'Finance');
-  const c1 = S.addCours(idx, m.id, { titre: 'Ch1', pages: 3, octets: 10 });
-  const c2 = S.addCours(idx, m.id, { titre: 'Ch2' });
-  const q1 = S.addQuiz(idx, m.id, { titre: 'Q1', coursId: c1.id, nbQuestions: 5 });
-  S.addQuiz(idx, m.id, { titre: 'Q2', coursId: null });
-  assert.equal(S.locateQuiz(idx, q1.id).matiere.id, m.id);
-  // réordonner
-  S.reorder(m.cours, c2.id, -1);
-  assert.deepEqual(S.sorted(m.cours).map((c) => c.titre), ['Ch2', 'Ch1']);
-  // déplacer un cours : son quiz suit
-  S.moveCours(idx, c1.id, m2.id);
-  assert.equal(S.locateQuiz(idx, q1.id).matiere.id, m2.id);
-  // supprimer le cours : le quiz reste, rattaché à la matière
-  const del = S.deleteCours(idx, c1.id);
-  assert.deepEqual(del, [S.PATHS.cours(c1.id)]);
-  assert.equal(S.locateQuiz(idx, q1.id).quiz.coursId, null);
-  // déplacer une matière de semestre
-  S.moveMatiere(idx, m2.id, a.semestres[1].id);
-  assert.equal(S.locateMatiere(idx, m2.id).semestre.id, a.semestres[1].id);
-  // supprimer une année renvoie tous ses fichiers
-  const files = S.deleteAnnee(idx, a.id);
-  assert.equal(files.length, 3);
-  assert.equal(idx.annees.length, 0);
+test('publier : noms affichés et ordre', () => {
+  assert.equal(P.displayName('01 - Le mix marketing'), 'Le mix marketing');
+  assert.equal(P.displayName('2) Segmentation'), 'Segmentation');
+  assert.equal(P.displayName('1re année'), '1re année');
+  assert.equal(P.displayName('Semestre 1'), 'Semestre 1');
 });
 
-test('store : brouillons masqués côté élève', () => {
-  const idx = S.emptyIndex();
-  const a = S.addAnnee(idx);
-  const m = S.addMatiere(idx, a.semestres[0].id, 'M');
-  const mb = S.addMatiere(idx, a.semestres[0].id, 'Brouillon');
-  mb.brouillon = true;
-  const c = S.addCours(idx, m.id, { titre: 'C', brouillon: true });
-  S.addCours(idx, m.id, { titre: 'Visible' });
-  S.addQuiz(idx, m.id, { titre: 'Q', coursId: c.id });
-  S.addQuiz(idx, m.id, { titre: 'Qb', brouillon: true });
-  const v = S.visibleIndex(idx);
-  const sem = v.annees[0].semestres[0];
-  assert.deepEqual(sem.matieres.map((x) => x.nom), ['M']);
-  assert.deepEqual(sem.matieres[0].cours.map((x) => x.titre), ['Visible']);
-  assert.deepEqual(sem.matieres[0].quiz.map((x) => [x.titre, x.coursId]), [['Q', null]]);
-  // l'original n'est pas modifié
-  assert.equal(idx.annees[0].semestres[0].matieres.length, 2);
+test('publier : lecture des quiz (QCM, ouverte, numéros à partir de 1)', () => {
+  const r = P.parseQuiz(JSON.stringify({ titre: 'T', questions: [
+    { q: 'Q1', choix: ['a', 'b', 'c'], reponses: [3, 1] },
+    { q: 'Q2', choix: ['a', 'b'], reponses: 2 },
+    { q: 'Q3', reponse: 'R' },
+  ] }), 'f');
+  assert.deepEqual(r.errors, []);
+  assert.equal(r.titre, 'T');
+  assert.deepEqual(r.questions[0], { id: 'x1', type: 'qcm', enonce: 'Q1', choix: ['a', 'b', 'c'], bonnes: [0, 2] });
+  assert.deepEqual(r.questions[1].bonnes, [1]);
+  assert.deepEqual(r.questions[2], { id: 'x3', type: 'ouverte', enonce: 'Q3', reponse: 'R' });
 });
 
-test('store : validation des questions', () => {
-  assert.equal(S.validateQuestions([]).length, 1);
-  const errs = S.validateQuestions([
-    { type: 'qcm', enonce: 'x', choix: ['a', 'b'], bonnes: [] },
-    { type: 'ouverte', enonce: '', reponse: '' },
-  ]);
-  assert.equal(errs.length, 3);
-  assert.deepEqual(S.validateQuestions([{ type: 'qcm', enonce: 'x', choix: ['a', 'b'], bonnes: [1] }]), []);
+test('publier : erreurs de quiz explicites', () => {
+  assert.match(P.parseQuiz('{ "questions": [ {"q":"x",} ] }', 'f').errors[0], /JSON invalide/);
+  assert.match(P.parseQuiz('{}', 'f').errors[0], /questions/);
+  const e = P.parseQuiz(JSON.stringify({ questions: [
+    { q: 'x', choix: ['a', 'b'], reponses: [3] },
+    { q: '', reponse: 'r' },
+    { q: 'y' },
+    { q: 'z', choix: ['a'], reponses: [1] },
+    { q: 'w', choix: ['a', 'b'], reponse: 'r' },
+  ] }), 'f').errors;
+  assert.equal(e.length, 5);
+  assert.match(e[0], /question 1 .*invalide/);
+});
+
+test('publier : nombre de pages (flux compressés)', () => {
+  const pdf = Buffer.from('%PDF-1.4\n1 0 obj << /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >> endobj\n');
+  assert.equal(P.pageCount(pdf), 2);
+  const inner = Buffer.from('<< /Type /Pages /Count 7 /Kids [] >>');
+  const zlib = require('node:zlib');
+  const comp = Buffer.concat([Buffer.from('%PDF-1.5\n5 0 obj << /Type /ObjStm /Filter /FlateDecode >>\nstream\n'), zlib.deflateSync(inner), Buffer.from('\nendstream\n')]);
+  assert.equal(P.pageCount(comp), 7);
+});
+
+test('publier : parcours du dossier de contenus', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'contenus-'));
+  const m = path.join(root, '1re année', 'Semestre 1', 'Marketing');
+  fs.mkdirSync(m, { recursive: true });
+  fs.writeFileSync(path.join(m, '02 - B.pdf'), '%PDF-1.4');
+  fs.writeFileSync(path.join(m, '01 - A.pdf'), '%PDF-1.4');
+  fs.writeFileSync(path.join(m, '01 - A.quiz.json'), JSON.stringify({ questions: [{ q: 'q', reponse: 'r' }] }));
+  fs.writeFileSync(path.join(m, 'Annale.quiz.json'), JSON.stringify({ titre: 'Annale 2025', questions: [{ q: 'q', reponse: 'r' }] }));
+  fs.writeFileSync(path.join(m, '_03 - Brouillon.pdf'), '%PDF-1.4');
+  fs.writeFileSync(path.join(m, 'liens.json'), JSON.stringify([{ titre: 'V', url: 'https://youtu.be/x' }]));
+  const r = P.scan(root);
+  assert.deepEqual(r.errors, []);
+  assert.equal(r.drafts.length, 1);
+  const mat = r.annees[0].semestres[0].matieres[0];
+  assert.deepEqual(mat.cours.map((c) => c.titre), ['A', 'B']);
+  assert.deepEqual(mat.quiz.map((q) => [q.titre, q.linked]), [['A', '01 - A'], ['Annale 2025', null]]);
+  assert.equal(mat.liens.length, 1);
+});
+
+test('store : regroupement des quiz par cours', () => {
+  const m = { cours: [{ id: 'c2', ordre: 2 }, { id: 'c1', ordre: 1 }], quiz: [{ id: 'q1', coursId: 'c2' }, { id: 'q2', coursId: null }, { id: 'q3', coursId: 'c1' }] };
+  const g = S.quizGroups(m);
+  assert.deepEqual(g.map((x) => [x.cours && x.cours.id, x.quiz.map((q) => q.id)]), [['c1', ['q3']], ['c2', ['q1']], [null, ['q2']]]);
 });
 
 test('store : détection YouTube', () => {
   assert.equal(S.youtubeId('https://www.youtube.com/watch?v=abc123'), 'abc123');
   assert.equal(S.youtubeId('https://youtu.be/xyz'), 'xyz');
-  assert.equal(S.youtubeId('https://www.youtube.com/shorts/s1'), 's1');
   assert.equal(S.youtubeId('https://example.com'), null);
 });

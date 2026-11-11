@@ -1,0 +1,19 @@
+{
+  "titre": "Quiz · Le mix marketing",
+  "questions": [
+    {
+      "q": "Quels éléments font partie des 4P ?",
+      "choix": ["Prix", "Personnel", "Produit", "Profit"],
+      "reponses": [1, 3]
+    },
+    {
+      "q": "La stratégie d'écrémage consiste à :",
+      "choix": ["Fixer un prix élevé", "Fixer un prix bas", "Supprimer un produit"],
+      "reponses": [1]
+    },
+    {
+      "q": "Définissez le positionnement.",
+      "reponse": "La place qu'occupe le produit dans l'esprit du consommateur, par rapport aux concurrents."
+    }
+  ]
+}

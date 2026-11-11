@@ -15,7 +15,7 @@ import { createRouter } from '../router.js';
 import { setVendorBase, openPdf, mountViewer } from '../pdf-viewer.js';
 import { runQuiz } from '../quiz-ui.js';
 import { buildMatiereQuiz, MATIERE_QUIZ_SIZE, scoreClass, formatNote } from '../quiz-engine.js';
-import { addAttempt, attemptsForQuiz, attemptsForMatiere, matiereStats, clearHistory } from '../history.js';
+import { addAttempt, attemptsForQuiz, attemptsForMatiere, matiereStats } from '../history.js';
 
 const app = document.getElementById('app');
 const data = new PublishedData('');
@@ -216,14 +216,7 @@ function home(params, query) {
       h('div', { class: 'table-wrap' }, h('table', { class: 'table' },
         h('thead', null, h('tr', null, h('th', null, 'Matière'), h('th', null, 'Dernière note'), h('th', { class: 'num hide-mobile' }, 'Meilleure'), h('th', { class: 'num hide-mobile' }, 'Tentatives'))),
         h('tbody', null, rows))),
-      h('div', { class: 'row between', style: { marginTop: '8px' } },
-        h('p', { class: 'tiny muted', style: { margin: 0 } }, 'Rouge sous 10, orange de 10 à 14, vert à partir de 14. Historique propre à cet appareil.'),
-        h('button', { type: 'button', class: 'btn ghost sm', onClick: async () => {
-          if (await confirmDialog('Effacer l\'historique ?', 'Toutes vos notes enregistrées sur cet appareil seront supprimées.', { ok: 'Effacer', danger: true })) {
-            clearHistory();
-            router.refresh();
-          }
-        } }, 'Effacer l\'historique')),
+      h('p', { class: 'tiny muted', style: { marginTop: '8px' } }, 'Rouge sous 10, orange de 10 à 14, vert à partir de 14. Historique propre à cet appareil.'),
     ];
   }
 
@@ -634,5 +627,3 @@ function registerSW() {
   navigator.serviceWorker.register('sw.js').catch(() => { /* PWA facultative */ });
 }
 
-// Accès console pour le dépannage : effacer l'historique local.
-window.isiamClearHistory = clearHistory;

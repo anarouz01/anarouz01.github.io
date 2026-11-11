@@ -1,0 +1,12 @@
+{
+  "name": "isiam-revisions",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node dev/mock-github.mjs",
+    "test": "node --test dev/unit.test.mjs",
+    "test:pdf": "node dev/make-test-pdfs.cjs",
+    "test:e2e": "node dev/make-test-pdfs.cjs && node dev/e2e.cjs"
+  },
+  "description": "Site de révision ISIAM : cours PDF et quiz chiffrés, hébergés sur GitHub Pages"
+}

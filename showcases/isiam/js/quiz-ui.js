@@ -7,7 +7,7 @@ import { h, clear, icon, confirmDialog } from './ui.js';
 import { prepare, score, isAnswered, scoreClass, formatNote } from './quiz-engine.js';
 
 /**
- * opts = { titre, questions, onFinish(result), onExit(), backLabel, onGuard(active) }
+ * opts = { titre, questions, onFinish(result, correction), onExit(), backLabel, onGuard(active), resultActions(result) }
  */
 export function runQuiz(root, opts) {
   const { titre, questions } = opts;
@@ -155,7 +155,7 @@ export function runQuiz(root, opts) {
     setGuard(false);
     clear(root);
     const result = score(items, answers);
-    if (!finished && opts.onFinish) opts.onFinish(result);
+    if (!finished && opts.onFinish) opts.onFinish(result, correction(result));
     finished = true;
     const cls = scoreClass(result.sur20);
 
@@ -206,6 +206,17 @@ export function runQuiz(root, opts) {
       h('div', { class: 'card' }, review),
     );
     window.scrollTo(0, 0);
+  }
+
+  /** Instantané de la correction (ordre d'affichage), pour le partage a posteriori. */
+  function correction(result) {
+    return items.map(({ q }, i) => {
+      const a = answers[q.id] || {};
+      const d = result.details[i];
+      return q.type === 'qcm'
+        ? { t: 'qcm', e: q.enonce, c: q.choix, b: q.bonnes, s: a.selected || [], v: d.verdict, p: d.points }
+        : { t: 'ouverte', e: q.enonce, r: q.reponse, x: a.texte || '', v: d.verdict, p: d.points };
+    });
   }
 
   function restart() {

@@ -144,16 +144,23 @@ function check(label, cond, extra = '') {
     const note = (await e.locator('.result-score').innerText()).replace(/\s+/g, ' ');
     check('Quiz : réponses JSON (numéros à partir de 1) correctement corrigées → 12,5/20', note.includes('12,5'), note);
     await shot(e, '18-eleve-resultat');
-    await e.click('button:has-text("Partager")');
-    await e.waitForSelector('.modal img.share-preview');
-    await e.waitForFunction(() => document.querySelector('img.share-preview').naturalWidth > 0);
-    const png = await e.evaluate(async () => {
-      const r = await fetch(document.querySelector('img.share-preview').src);
+    const grab = () => e.evaluate(async () => Promise.all([...document.querySelectorAll('.share-thumb img')].map(async (img) => {
+      const r = await fetch(img.src);
       const b = new Uint8Array(await r.arrayBuffer());
       let s = ''; for (const x of b) s += String.fromCharCode(x); return btoa(s);
-    });
-    fs.writeFileSync(path.join(SHOTS, '40-partage-apres-quiz.png'), Buffer.from(png, 'base64'));
-    check('Partage : image générée après le quiz', png.length > 10000);
+    })));
+    const ready = () => e.waitForFunction(() => document.querySelectorAll('.share-thumb img').length >= 1 && [...document.querySelectorAll('.share-thumb img')].every((i) => i.naturalWidth > 0), null, { timeout: 15000 });
+    await e.click('button:has-text("Partager le résultat")');
+    await ready();
+    const resImgs = await grab();
+    fs.writeFileSync(path.join(SHOTS, '40-partage-resultat.png'), Buffer.from(resImgs[0], 'base64'));
+    check('Partage du résultat seul : 1 image', resImgs.length === 1);
+    await e.keyboard.press('Escape');
+    await e.click('button:has-text("Partager la correction")');
+    await ready();
+    const imgs = await grab();
+    imgs.forEach((b64, i) => fs.writeFileSync(path.join(SHOTS, `40-partage-correction-${i}.png`), Buffer.from(b64, 'base64')));
+    check('Partage de la correction : toutes les questions sur une seule image', imgs.length === 1);
     await e.keyboard.press('Escape');
 
     await e.goto(`${BASE}/index.html#/`);
@@ -179,24 +186,21 @@ function check(label, cond, extra = '') {
       const l = JSON.parse(localStorage.getItem('isiam.resultats'));
       const a = l.find((x) => x.kind === 'quiz');
       const d = (n) => new Date(Date.now() - n * 86400000).toISOString();
-      l.push({ ...a, sur20: 9, pct: 45, date: d(6) }, { ...a, sur20: 14.5, pct: 73, date: d(3) }, { ...a, sur20: 17, pct: 85, date: d(1) });
+      l.push({ ...a, id: 'x1', detail: undefined, sur20: 9, pct: 45, date: d(6) }, { ...a, id: 'x2', detail: undefined, sur20: 14.5, pct: 73, date: d(3) }, { ...a, id: 'x3', detail: undefined, sur20: 17, pct: 85, date: d(1) });
       localStorage.setItem('isiam.resultats', JSON.stringify(l));
     });
     await e.click('a.year-card:has-text("1re année")');
     await e.click('.semester .card:has-text("Marketing")');
     await e.click('a.tab:has-text("Quiz")');
-    await e.click('.course-row:has-text("Quiz · Le mix marketing") .share-btn');
-    await e.waitForSelector('.modal img.share-preview');
-    await e.waitForFunction(() => document.querySelector('img.share-preview').naturalWidth > 0);
-    const png2 = await e.evaluate(async () => {
-      const r = await fetch(document.querySelector('img.share-preview').src);
-      const b = new Uint8Array(await r.arrayBuffer());
-      let s = ''; for (const x of b) s += String.fromCharCode(x); return btoa(s);
-    });
-    fs.writeFileSync(path.join(SHOTS, '41-partage-a-posteriori.png'), Buffer.from(png2, 'base64'));
-    await e.waitForTimeout(400);
-    await e.screenshot({ path: path.join(SHOTS, '42-modale-partage.png') });
-    check('Partage : a posteriori depuis la liste des quiz (4 tentatives)', (await e.locator('.modal img.share-preview').getAttribute('alt')).includes('4 tentatives'));
+    await e.click('.course-row:has-text("Quiz · Le mix marketing") button[aria-label^="Partager le résultat"]');
+    await e.waitForFunction(() => document.querySelectorAll('.share-thumb img').length === 1 && document.querySelector('.share-thumb img').naturalWidth > 0, null, { timeout: 15000 });
+    check('Partage : a posteriori depuis la liste des quiz (4 tentatives)', (await e.locator('.share-thumb img').first().getAttribute('alt')).includes('4 tentatives'));
+    await e.keyboard.press('Escape');
+    await e.click('.course-row:has-text("Quiz · Le mix marketing") button[aria-label^="Partager la correction"]');
+    await e.waitForFunction(() => document.querySelectorAll('.share-thumb img').length === 1 && document.querySelector('.share-thumb img').naturalWidth > 0, null, { timeout: 15000 });
+    check('Partage a posteriori : seule la tentative avec correction est proposée', (await e.locator('.modal select option').count()) === 1);
+    await e.waitForTimeout(300);
+    await e.screenshot({ path: path.join(SHOTS, '42-modale-correction.png') });
     await e.keyboard.press('Escape');
 
     // ----- Navigation fluide
@@ -226,12 +230,15 @@ function check(label, cond, extra = '') {
     await e.waitForSelector('.course-row');
     await e.click('.course-row:has-text("Le mix marketing") a.btn:has-text("Quiz")');
     await e.waitForSelector('.question-card');
-    await e.locator('.choice').first().locator('input').check();
+    const isQcm = (await e.locator('.choice').count()) > 0;
+    if (isQcm) await e.locator('.choice').first().locator('input').check();
+    else await e.fill('.question-card textarea', 'ma réponse');
     await e.click('button:has-text("Revoir le cours")');
     await e.waitForSelector('.sheet .pdf-page canvas', { timeout: 15000 });
     await e.screenshot({ path: path.join(SHOTS, '30-quiz-revoir-cours.png') });
     await e.click('.sheet button:has-text("Retour au quiz")');
-    check('Quiz : « Revoir le cours » sans perdre les réponses', (await e.locator('.choice input:checked').count()) === 1 && (await e.locator('.sheet').count()) === 0);
+    const kept = isQcm ? (await e.locator('.choice input:checked').count()) === 1 : (await e.inputValue('.question-card textarea')) === 'ma réponse';
+    check('Quiz : « Revoir le cours » sans perdre les réponses', kept && (await e.locator('.sheet').count()) === 0);
     await e.click('.crumbs a:has-text("Le mix marketing"), .back-link');
     await e.waitForSelector('h1:has-text("Le mix marketing")');
     check('Quiz : retour (confirmé) vers le cours', true);
@@ -257,6 +264,15 @@ function check(label, cond, extra = '') {
     const t2 = await e.locator('.list-item .title').allInnerTexts();
     check('Élève : mise à jour visible', t2.join('|') === 'Le mix marketing|Le positionnement', t2.join(' | '));
 
+    // ----- Effacer l'historique
+    await e.goto(`${BASE}/index.html#/`);
+    await e.waitForSelector('button:has-text("Effacer l\'historique")');
+    await e.click('button:has-text("Effacer l\'historique")');
+    await e.click('.modal button:has-text("Tout effacer")');
+    await e.waitForSelector('.toast.good');
+    const left = await e.evaluate(() => [localStorage.getItem('isiam.resultats'), localStorage.getItem('isiam.dernierCours')]);
+    check('Effacer l\'historique : notes, corrections et dernier cours supprimés', !left[0] && !left[1] && (await e.locator('.resume-card').count()) === 0);
+
     // ----- Changement de mot de passe
     out = publish(['--changer-mot-de-passe'], { ISIAM_NOUVEAU_MDP: PW2 });
     check('Changement de mot de passe : tout rechiffré', /Nouveau mot de passe enregistré/.test(out));
@@ -265,8 +281,11 @@ function check(label, cond, extra = '') {
     check('Élève : l\'ancien mot de passe ne suffit plus', (await e.locator('.notice.bad:not([hidden])').innerText()).includes('changé'));
     await e.fill('#pw', PW2);
     await e.click('button:has-text("Entrer")');
+    await e.waitForSelector('.year-card');
+    await e.click('a.year-card:has-text("1re année")');
+    await e.click('.semester .card:has-text("Marketing")');
     await e.waitForSelector('.list-item:has-text("Le positionnement")');
-    await e.click('.list-item:has-text("Le positionnement")');
+    await e.click('.list-item:has-text("Le positionnement") .row-link');
     await e.waitForSelector('.pdf-page canvas', { timeout: 15000 });
     check('Élève : le nouveau mot de passe ouvre les cours', true);
     await e.waitForTimeout(800);

@@ -3,7 +3,7 @@
 // ce qui a déjà été ouvert. Réseau d'abord (toujours la dernière version en
 // ligne), cache en secours. 
 // ==========================================================================
-const VERSION = '2026-11-11.5';
+const VERSION = '2026-11-12.2';
 const CACHE = `isiam-${VERSION}`;
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest',

@@ -348,4 +348,13 @@ table.table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
 /* Partage des résultats */
 .share-preview { display: block; width: 100%; height: auto; max-height: 55vh; object-fit: contain; background: #f7f7f5; border-radius: 12px; border: 1px solid var(--border); margin: 8px 0; }
 .share-actions { justify-content: flex-start; }
-.course-row > .share-btn { margin-right: var(--s3); }
+.course-row > .share-btn { margin-right: 6px; }
+.course-row > .share-btn:last-child { margin-right: var(--s3); }
+
+.share-strip { display: flex; gap: 10px; overflow-x: auto; padding: 4px 0 10px; scroll-snap-type: x mandatory; min-height: 120px; }
+.share-thumb { flex: none; width: min(46%, 300px); scroll-snap-align: start; }
+.share-thumb img { display: block; width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--border); background: #fff; }
+@media (max-width: 640px) { .share-thumb { width: 72%; } }
+
+.share-thumb.single { width: 100%; max-width: 560px; margin: 0 auto; }
+.share-thumb.single img { max-height: 60vh; object-fit: contain; }

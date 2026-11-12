@@ -14,9 +14,9 @@ import {
 import { createRouter } from '../router.js';
 import { setVendorBase, openPdf, mountViewer } from '../pdf-viewer.js';
 import { runQuiz } from '../quiz-ui.js';
-import { openShare } from '../share.js';
+import { openShare, openShareCorrection, withDetail } from '../share.js';
 import { buildMatiereQuiz, MATIERE_QUIZ_SIZE, scoreClass, formatNote } from '../quiz-engine.js';
-import { addAttempt, attemptsForQuiz, attemptsForMatiere, matiereStats } from '../history.js';
+import { addAttempt, attemptsForQuiz, attemptsForMatiere, matiereStats, clearHistory } from '../history.js';
 
 const app = document.getElementById('app');
 const data = new PublishedData('');
@@ -217,7 +217,9 @@ function home(params, query) {
       h('div', { class: 'table-wrap' }, h('table', { class: 'table' },
         h('thead', null, h('tr', null, h('th', null, 'Matière'), h('th', null, 'Dernière note'), h('th', { class: 'num hide-mobile' }, 'Meilleure'), h('th', { class: 'num hide-mobile' }, 'Tentatives'))),
         h('tbody', null, rows))),
-      h('p', { class: 'tiny muted', style: { marginTop: '8px' } }, 'Rouge sous 10, orange de 10 à 14, vert à partir de 14. Historique propre à cet appareil.'),
+      h('div', { class: 'row between', style: { marginTop: '8px' } },
+        h('p', { class: 'tiny muted', style: { margin: 0 } }, 'Rouge sous 10, orange de 10 à 14, vert à partir de 14. Historique propre à cet appareil.'),
+        h('button', { type: 'button', class: 'btn ghost sm', onClick: clearDeviceData }, icon('trash'), 'Effacer l\'historique')),
     ];
   }
 
@@ -314,16 +316,44 @@ function quizStatsLine(q) {
   return { text: parts.join(' · '), done: att.length > 0, last: att[att.length - 1] };
 }
 
+// ---------- Effacement des données de l'appareil ----------
+async function clearDeviceData() {
+  const ok = await confirmDialog('Effacer l\'historique ?',
+    'Toutes les notes, les corrections enregistrées, le dernier cours ouvert et les cours gardés pour la lecture hors connexion seront supprimés de cet appareil. Le mot de passe reste mémorisé (bouton de déconnexion en haut à droite pour l\'oublier).',
+    { ok: 'Tout effacer', danger: true });
+  if (!ok) return;
+  clearHistory();
+  try { localStorage.removeItem(LAST_KEY); } catch { /* ignoré */ }
+  try { sessionStorage.removeItem('isiam.nav'); } catch { /* ignoré */ }
+  coursCache.clear();
+  // Cours et quiz chiffrés gardés par l'application pour le hors-connexion.
+  try {
+    if (window.caches) {
+      for (const name of await caches.keys()) {
+        const cache = await caches.open(name);
+        for (const req of await cache.keys()) if (/\/data\//.test(new URL(req.url).pathname)) await cache.delete(req);
+      }
+    }
+  } catch { /* ignoré */ }
+  toast('Historique et données de cet appareil effacés.', 'good');
+  router.refresh();
+}
+
 // ---------- Partage des résultats ----------
-function shareQuiz(quiz) {
+let lastAttempt = null;
+function quizShareInfo(quiz, selectedId) {
   const loc = locateQuiz(idx, quiz.id);
-  openShare({ titre: quiz.titre, contexte: loc ? `${loc.matiere.nom} · ${loc.annee.nom}` : '', attempts: attemptsForQuiz(quiz.id) });
+  return { titre: quiz.titre, contexte: loc ? `${loc.matiere.nom} · ${loc.annee.nom}` : '', attempts: attemptsForQuiz(quiz.id), selectedId };
 }
-function shareMatiere(matiere) {
+function matiereShareInfo(matiere, selectedId) {
   const loc = locateMatiere(idx, matiere.id);
-  openShare({ titre: `Quiz de la matière · ${matiere.nom}`, contexte: loc ? `${matiere.nom} · ${loc.annee.nom}` : matiere.nom, attempts: attemptsForMatiere(matiere.id).filter((a) => a.kind === 'matiere') });
+  return { titre: `Quiz de la matière · ${matiere.nom}`, contexte: loc ? `${matiere.nom} · ${loc.annee.nom}` : matiere.nom, attempts: attemptsForMatiere(matiere.id).filter((a) => a.kind === 'matiere'), selectedId };
 }
-const shareBtn = (onClick, label = 'Partager') => h('button', { type: 'button', class: 'btn', onClick }, icon('share'), h('span', null, label));
+const shareQuiz = (quiz) => openShare(quizShareInfo(quiz));
+const shareMatiere = (matiere) => openShare(matiereShareInfo(matiere));
+const shareBtn = (onClick, label = 'Partager le résultat') => h('button', { type: 'button', class: 'btn', onClick }, icon('share'), h('span', null, label));
+const correctionBtn = (onClick) => h('button', { type: 'button', class: 'btn', onClick }, icon('check'), h('span', null, 'Partager la correction'));
+const iconBtnShare = (label, onClick, ic = 'share') => h('button', { type: 'button', class: 'btn icon sm share-btn', title: label, 'aria-label': label, onClick }, icon(ic));
 
 function quizTab(matiere) {
   if (!matiere.quiz.length) return empty('Aucun quiz pour l\'instant.', 'quiz');
@@ -337,7 +367,8 @@ function quizTab(matiere) {
         h('div', { class: 'muted small' }, `${Math.min(MATIERE_QUIZ_SIZE, totalQ)} questions tirées au hasard dans tous les quiz, réparties entre les cours.`),
         lastM ? h('div', { class: 'tiny muted', style: { marginTop: '4px' } }, `Dernière tentative : ${formatNote(lastM.sur20)}/20 le ${fmtDate(lastM.date)}`) : null),
       h('div', { class: 'row' },
-        lastM ? h('button', { type: 'button', class: 'btn icon', title: 'Partager mes résultats', 'aria-label': 'Partager mes résultats du quiz de la matière', onClick: () => shareMatiere(matiere) }, icon('share')) : null,
+        lastM && withDetail(mAtt).length ? h('button', { type: 'button', class: 'btn icon', title: 'Partager la correction', 'aria-label': 'Partager la correction du quiz de la matière', onClick: () => openShareCorrection(matiereShareInfo(matiere)) }, icon('check')) : null,
+        lastM ? h('button', { type: 'button', class: 'btn icon', title: 'Partager le résultat', 'aria-label': 'Partager le résultat du quiz de la matière', onClick: () => shareMatiere(matiere) }, icon('share')) : null,
         h('a', { class: 'btn primary', href: `#/qm/${matiere.id}` }, icon('play'), 'Commencer'))));
 
   const groups = quizGroups(matiere).filter((g) => g.quiz.length);
@@ -351,7 +382,8 @@ function quizTab(matiere) {
         h('a', { class: 'row-link', href: `#/q/${q.id}` },
           h('span', { class: 'grow' }, h('span', { class: 'title' }, q.titre, ' ', draftBadge(q)), h('span', { class: 'sub' }, st.text)),
           st.done ? h('span', { class: `badge ${scoreClass(st.last.sur20)}` }, `${formatNote(st.last.sur20)}/20`) : h('span', { class: 'badge' }, 'Jamais fait')),
-        st.done ? h('button', { type: 'button', class: 'btn icon sm share-btn', title: 'Partager mes résultats', 'aria-label': `Partager mes résultats : ${q.titre}`, onClick: () => shareQuiz(q) }, icon('share')) : null);
+        st.done && withDetail(attemptsForQuiz(q.id)).length ? iconBtnShare(`Partager la correction : ${q.titre}`, () => openShareCorrection(quizShareInfo(q)), 'check') : null,
+        st.done ? iconBtnShare(`Partager le résultat : ${q.titre}`, () => shareQuiz(q)) : null);
     })))));
 }
 
@@ -581,14 +613,15 @@ async function quizPage({ id }) {
         h('button', { type: 'button', class: 'btn sm', onClick: () => { closeOverlay = openCoursOverlay(cours); } }, icon('book'), 'Revoir le cours')) : null,
       resultActions: () => [
         !preview ? shareBtn(() => shareQuiz(quiz)) : null,
+        !preview ? correctionBtn(() => openShareCorrection(quizShareInfo(quiz, lastAttempt && lastAttempt.id))) : null,
         next ? h('a', { class: 'btn', href: `#/c/${next.id}` }, h('span', null, 'Cours suivant'), icon('right')) : null,
         !next ? h('a', { class: 'btn', href: `#/qm/${matiere.id}` }, icon('play'), 'Quiz de la matière') : null,
       ],
       onGuard: quizGuard,
       onExit: () => { quizGuard(false); router.back(parent); },
-      onFinish: (r) => {
+      onFinish: (r, detail) => {
         if (preview) return;
-        addAttempt({ kind: 'quiz', quizId: quiz.id, matiereId: matiere.id, titre: quiz.titre, points: r.points, total: r.total, sur20: r.sur20, pct: r.pct });
+        lastAttempt = addAttempt({ kind: 'quiz', quizId: quiz.id, matiereId: matiere.id, titre: quiz.titre, points: r.points, total: r.total, sur20: r.sur20, pct: r.pct, detail });
       },
     });
   } catch (e) {
@@ -624,12 +657,15 @@ async function quizMatierePage({ id }) {
       questions: buildMatiereQuiz(groups),
       regenerate: () => buildMatiereQuiz(groups),
       backLabel: 'Retour à la matière',
-      resultActions: () => [!preview ? shareBtn(() => shareMatiere(matiere)) : null],
+      resultActions: () => (preview ? [] : [
+        shareBtn(() => shareMatiere(matiere)),
+        correctionBtn(() => openShareCorrection(matiereShareInfo(matiere, lastAttempt && lastAttempt.id))),
+      ]),
       onGuard: quizGuard,
       onExit: () => { quizGuard(false); router.back(`/m/${matiere.id}/quiz`); },
-      onFinish: (r) => {
+      onFinish: (r, detail) => {
         if (preview) return;
-        addAttempt({ kind: 'matiere', matiereId: matiere.id, titre: `Quiz de la matière · ${matiere.nom}`, points: r.points, total: r.total, sur20: r.sur20, pct: r.pct });
+        lastAttempt = addAttempt({ kind: 'matiere', matiereId: matiere.id, titre: `Quiz de la matière · ${matiere.nom}`, points: r.points, total: r.total, sur20: r.sur20, pct: r.pct, detail });
       },
     });
   } catch (e) {

@@ -4,7 +4,7 @@
 // Aucune bonne réponse n'est affichée avant « Terminer ».
 // ==========================================================================
 import { h, clear, icon, confirmDialog } from './ui.js';
-import { prepare, score, isAnswered, scoreClass, formatNote } from './quiz-engine.js';
+import { prepare, score, isAnswered, scoreClass, formatNote, formatDuree, formatClock } from './quiz-engine.js';
 
 /**
  * opts = { titre, questions, onFinish(result, correction), onExit(), backLabel, onGuard(active), resultActions(result) }
@@ -18,6 +18,35 @@ export function runQuiz(root, opts) {
 
   const setGuard = (active) => { if (opts.onGuard) opts.onGuard(active); };
 
+  // ---------- Chronomètre : temps passé sur chaque question ----------
+  // Le temps ne compte que lorsque la question est affichée et la page visible.
+  let times = {};
+  let runningId = null;
+  let qStart = null;
+  let ticker = null;
+  let clockEl = null;
+  const now = () => performance.now();
+  function stopClock() {
+    if (runningId && qStart !== null) times[runningId] = (times[runningId] || 0) + (now() - qStart);
+    qStart = null;
+  }
+  function startClock() {
+    if (runningId && !finished && document.visibilityState === 'visible') qStart = now();
+  }
+  const totalTime = () => Object.values(times).reduce((a, b) => a + b, 0) + (qStart !== null ? now() - qStart : 0);
+  const questionTime = (id) => (times[id] || 0) + (id === runningId && qStart !== null ? now() - qStart : 0);
+  function paintClock() {
+    if (!root.isConnected) { clearInterval(ticker); ticker = null; document.removeEventListener('visibilitychange', onVisibility); return; }
+    if (clockEl && clockEl.isConnected) {
+      clockEl.textContent = `${formatClock(totalTime())} · question ${formatClock(questionTime(runningId))}`;
+    }
+  }
+  function onVisibility() {
+    if (finished || !runningId) return;
+    if (document.visibilityState === 'hidden') stopClock(); else if (qStart === null && clockEl && clockEl.isConnected) startClock();
+  }
+  document.addEventListener('visibilitychange', onVisibility);
+
   function answeredCount() {
     return items.filter(({ q }) => isAnswered(q, answers[q.id])).length;
   }
@@ -27,6 +56,11 @@ export function runQuiz(root, opts) {
     setGuard(true);
     clear(root);
     const { q, perm } = items[current];
+    stopClock();
+    runningId = q.id;
+    startClock();
+    clockEl = h('span', { class: 'quiz-clock', 'aria-label': 'Temps écoulé (total · question en cours)' });
+    if (!ticker) ticker = setInterval(paintClock, 500);
     const n = items.length;
     const ans = answers[q.id] || (answers[q.id] = q.type === 'qcm' ? { selected: [] } : { texte: '' });
 
@@ -70,6 +104,7 @@ export function runQuiz(root, opts) {
     root.append(
       h('div', { class: 'page-head' }, h('h1', null, titre), opts.headerExtra ? opts.headerExtra() : null),
       h('div', { class: 'quiz-head' }, progress, h('span', { class: 'quiz-counter' }, `Question ${current + 1} / ${n}`)),
+      h('div', { class: 'quiz-timer' }, icon('clock'), clockEl),
       h('div', { class: 'card question-card' },
         h('div', { class: 'question-type' }, q.type === 'qcm'
           ? h('span', { class: 'badge accent' }, 'QCM · une ou plusieurs réponses')
@@ -88,6 +123,7 @@ export function runQuiz(root, opts) {
         !last ? h('button', { type: 'button', class: 'btn ghost sm', onClick: finish }, 'Terminer maintenant') : null),
     );
     updateDots();
+    paintClock();
     const focusable = root.querySelector('.choice input, textarea');
     if (focusable && opts.autofocus !== false) focusable.focus({ preventScroll: true });
   }
@@ -95,6 +131,9 @@ export function runQuiz(root, opts) {
   async function exit() {
     const ok = await confirmDialog('Quitter le quiz ?', 'Vos réponses ne seront pas enregistrées.', { ok: 'Quitter', danger: true });
     if (!ok) return;
+    stopClock();
+    clearInterval(ticker);
+    ticker = null;
     setGuard(false);
     if (opts.onExit) opts.onExit();
   }
@@ -107,6 +146,11 @@ export function runQuiz(root, opts) {
         { ok: 'Terminer' });
       if (!ok) return;
     }
+    // Le chronomètre s'arrête ici : l'auto-évaluation n'est pas comptée.
+    stopClock();
+    runningId = null;
+    clearInterval(ticker);
+    ticker = null;
     const open = items.filter(({ q }) => q.type === 'ouverte');
     // Une question ouverte sans réponse est automatiquement « faux ».
     for (const { q } of open) if (!isAnswered(q, answers[q.id])) answers[q.id] = { texte: '', auto: 'faux' };
@@ -155,6 +199,7 @@ export function runQuiz(root, opts) {
     setGuard(false);
     clear(root);
     const result = score(items, answers);
+    result.duree = Math.round(Object.values(times).reduce((a, b) => a + b, 0));
     if (!finished && opts.onFinish) opts.onFinish(result, correction(result));
     finished = true;
     const cls = scoreClass(result.sur20);
@@ -188,7 +233,8 @@ export function runQuiz(root, opts) {
           h('span', { class: `mark ${markCls}`, 'aria-label': d.verdict }, markTxt),
           h('div', { class: 'grow' },
             h('div', { class: 'review-q' }, `${i + 1}. ${q.enonce}`),
-            q.type === 'ouverte' ? h('div', { class: 'tiny muted' }, `Auto-évaluation : ${d.verdict}`) : null,
+            h('div', { class: 'tiny muted review-meta' }, icon('clock'), h('span', null, formatDuree(times[q.id])),
+              q.type === 'ouverte' ? h('span', null, ` · auto-évaluation : ${d.verdict}`) : null),
             detail)));
     }));
 
@@ -197,9 +243,13 @@ export function runQuiz(root, opts) {
         h('div', { class: 'muted small' }, titre),
         h('div', { class: 'result-score' }, formatNote(result.sur20), h('small', null, ' / 20')),
         h('div', { class: 'result-pct' }, `${result.pct} % · ${formatNote(result.points)} point${result.points > 1 ? 's' : ''} sur ${result.total}`),
+        h('div', { class: 'result-time' }, icon('clock'),
+          h('span', null, `Temps total : ${formatDuree(result.duree)}`),
+          items.length ? h('span', { class: 'muted' }, ` · ${formatDuree(result.duree / items.length)} par question en moyenne`) : null),
         h('div', { class: `progress ${cls}`, style: { maxWidth: '320px', margin: '16px auto 0' } }, h('span', { style: { width: `${result.pct}%` } })),
         h('div', { class: 'row', style: { justifyContent: 'center', marginTop: '24px', flexWrap: 'wrap' } },
-          h('button', { type: 'button', class: 'btn primary', onClick: restart }, icon('refresh'), 'Recommencer'),
+          !opts.canRestart || opts.canRestart() ? h('button', { type: 'button', class: 'btn primary', onClick: restart }, icon('refresh'), opts.restartLabel || 'Recommencer') : null,
+          opts.resultNote ? opts.resultNote() : null,
           opts.resultActions ? opts.resultActions(result) : null,
           opts.onExit ? h('button', { type: 'button', class: 'btn', onClick: () => opts.onExit() }, opts.backLabel || 'Retour') : null)),
       h('h2', { style: { marginTop: '32px' } }, 'Correction détaillée'),
@@ -214,8 +264,8 @@ export function runQuiz(root, opts) {
       const a = answers[q.id] || {};
       const d = result.details[i];
       return q.type === 'qcm'
-        ? { t: 'qcm', e: q.enonce, c: q.choix, b: q.bonnes, s: a.selected || [], v: d.verdict, p: d.points }
-        : { t: 'ouverte', e: q.enonce, r: q.reponse, x: a.texte || '', v: d.verdict, p: d.points };
+        ? { id: q.id, t: 'qcm', e: q.enonce, c: q.choix, b: q.bonnes, s: a.selected || [], v: d.verdict, p: d.points, ms: Math.round(times[q.id] || 0) }
+        : { id: q.id, t: 'ouverte', e: q.enonce, r: q.reponse, x: a.texte || '', v: d.verdict, p: d.points, ms: Math.round(times[q.id] || 0) };
     });
   }
 
@@ -224,6 +274,9 @@ export function runQuiz(root, opts) {
     answers = {};
     current = 0;
     finished = false;
+    times = {};
+    runningId = null;
+    qStart = null;
     renderQuestion();
     window.scrollTo(0, 0);
   }

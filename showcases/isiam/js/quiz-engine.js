@@ -129,3 +129,22 @@ export function scoreClass(sur20) {
 export function formatNote(x) {
   return String(Math.round(x * 10) / 10).replace('.', ',');
 }
+
+/** Durée lisible : « 42 s », « 8 min 12 s », « 1 h 05 min ». */
+export function formatDuree(ms) {
+  const t = Math.max(0, Math.round((ms || 0) / 1000));
+  if (t < 60) return `${t} s`;
+  const m = Math.floor(t / 60);
+  const sec = t % 60;
+  if (m < 60) return sec ? `${m} min ${String(sec).padStart(2, '0')} s` : `${m} min`;
+  return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min`;
+}
+
+/** Chronomètre : « 3:07 », « 1:02:45 ». */
+export function formatClock(ms) {
+  const t = Math.max(0, Math.floor((ms || 0) / 1000));
+  const hh = Math.floor(t / 3600);
+  const mm = Math.floor((t % 3600) / 60);
+  const ss = String(t % 60).padStart(2, '0');
+  return hh ? `${hh}:${String(mm).padStart(2, '0')}:${ss}` : `${mm}:${ss}`;
+}

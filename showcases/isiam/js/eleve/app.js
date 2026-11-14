@@ -15,6 +15,7 @@ import { createRouter } from '../router.js';
 import { setVendorBase, openPdf, mountViewer } from '../pdf-viewer.js';
 import { runQuiz } from '../quiz-ui.js';
 import { openShare, openShareCorrection, withDetail } from '../share.js';
+import { recordResults, errorsFor, countFor, pruneQuiz, syncWithIndex, clearErrors, errorKey } from '../erreurs.js';
 import { buildMatiereQuiz, MATIERE_QUIZ_SIZE, scoreClass, formatNote } from '../quiz-engine.js';
 import { addAttempt, attemptsForQuiz, attemptsForMatiere, matiereStats, clearHistory } from '../history.js';
 
@@ -103,6 +104,12 @@ async function loadIndex() {
   fullIndex = await data.index(key);
   idx = preview ? fullIndex : visibleIndex(fullIndex);
   loadedAt = Date.now();
+  // Erreurs mémorisées : on oublie celles des quiz retirés, on suit les quiz déplacés.
+  const info = new Map();
+  for (const a of idx.annees) for (const sm of a.semestres) for (const m of sm.matieres) {
+    for (const q of m.quiz) info.set(q.id, { coursId: q.coursId || null, matiereId: m.id });
+  }
+  syncWithIndex(info);
 }
 
 async function start() {
@@ -125,6 +132,7 @@ async function start() {
     ['/c/:id', coursPage],
     ['/q/:id', quizPage],
     ['/qm/:id', quizMatierePage],
+    ['/erreurs/:mid/:cid', erreursPage],
   ], () => notFound());
   router.start();
   registerSW();
@@ -319,10 +327,11 @@ function quizStatsLine(q) {
 // ---------- Effacement des données de l'appareil ----------
 async function clearDeviceData() {
   const ok = await confirmDialog('Effacer l\'historique ?',
-    'Toutes les notes, les corrections enregistrées, le dernier cours ouvert et les cours gardés pour la lecture hors connexion seront supprimés de cet appareil. Le mot de passe reste mémorisé (bouton de déconnexion en haut à droite pour l\'oublier).',
+    'Toutes les notes, les corrections enregistrées, la liste « Mes erreurs », le dernier cours ouvert et les cours gardés pour la lecture hors connexion seront supprimés de cet appareil. Le mot de passe reste mémorisé (bouton de déconnexion en haut à droite pour l\'oublier).',
     { ok: 'Tout effacer', danger: true });
   if (!ok) return;
   clearHistory();
+  clearErrors();
   try { localStorage.removeItem(LAST_KEY); } catch { /* ignoré */ }
   try { sessionStorage.removeItem('isiam.nav'); } catch { /* ignoré */ }
   coursCache.clear();
@@ -375,7 +384,9 @@ function quizTab(matiere) {
   return h('div', null, hero, groups.map((g) => h('section', { style: { marginBottom: '24px' } },
     h('div', { class: 'row between group-head' },
       h('h3', { class: 'muted', style: { margin: 0 } }, g.cours ? g.cours.titre : 'Quiz sur toute la matière'),
-      g.cours ? h('a', { class: 'btn sm ghost', href: `#/c/${g.cours.id}` }, icon('book'), 'Lire le cours') : null),
+      h('div', { class: 'row' },
+        mesErreursBtn(matiere.id, g.cours ? g.cours.id : null),
+        g.cours ? h('a', { class: 'btn sm ghost', href: `#/c/${g.cours.id}` }, icon('book'), 'Lire le cours') : null)),
     h('div', { class: 'list' }, g.quiz.map((q) => {
       const st = quizStatsLine(q);
       return h('div', { class: 'list-item course-row' },
@@ -481,7 +492,8 @@ async function coursPage({ id }) {
     h('div', { class: 'row' },
       quizzes.map((q, k) => quizButton(q, { primary: k === 0, label: quizzes.length > 1 ? q.titre : `Faire le quiz (${plural(q.nbQuestions || 0, 'question', 'questions')})` })),
       next ? h('a', { class: `btn ${quizzes.length ? '' : 'primary'}`, href: `#/c/${next.id}`, 'data-replace': '' }, h('span', null, `Cours suivant : ${next.titre}`), icon('right')) : null,
-      !next && matiere.quiz.length ? h('a', { class: 'btn', href: `#/qm/${matiere.id}` }, icon('play'), 'Quiz de la matière') : null));
+      !next && matiere.quiz.length ? h('a', { class: 'btn', href: `#/qm/${matiere.id}` }, icon('play'), 'Quiz de la matière') : null,
+      countFor(matiere.id, cours.id) ? mesErreursBtn(matiere.id, cours.id, 'btn') : null));
 
   setView(
     crumbs([{ label: 'Accueil', href: '#/' }, { label: annee.nom, href: `#/a/${annee.id}` }, { label: matiere.nom, href: `#/m/${matiere.id}` }, { label: cours.titre }]),
@@ -600,6 +612,7 @@ async function quizPage({ id }) {
   try {
     const content = await data.quiz(key, quiz);
     if (!alive) return;
+    pruneQuiz(quiz.id, new Set((content.questions || []).map((q) => q.id)));
     if (!content.questions || !content.questions.length) {
       clear(box).append(empty('Ce quiz ne contient pas encore de question.', 'quiz'));
       return;
@@ -621,7 +634,8 @@ async function quizPage({ id }) {
       onExit: () => { quizGuard(false); router.back(parent); },
       onFinish: (r, detail) => {
         if (preview) return;
-        lastAttempt = addAttempt({ kind: 'quiz', quizId: quiz.id, matiereId: matiere.id, titre: quiz.titre, points: r.points, total: r.total, sur20: r.sur20, pct: r.pct, detail });
+        recordErrors(detail, (id) => [quiz.id, id]);
+        lastAttempt = addAttempt({ kind: 'quiz', quizId: quiz.id, matiereId: matiere.id, titre: quiz.titre, points: r.points, total: r.total, sur20: r.sur20, pct: r.pct, duree: r.duree, detail });
       },
     });
   } catch (e) {
@@ -665,12 +679,86 @@ async function quizMatierePage({ id }) {
       onExit: () => { quizGuard(false); router.back(`/m/${matiere.id}/quiz`); },
       onFinish: (r, detail) => {
         if (preview) return;
-        lastAttempt = addAttempt({ kind: 'matiere', matiereId: matiere.id, titre: `Quiz de la matière · ${matiere.nom}`, points: r.points, total: r.total, sur20: r.sur20, pct: r.pct, detail });
+        recordErrors(detail, splitKey);
+        lastAttempt = addAttempt({ kind: 'matiere', matiereId: matiere.id, titre: `Quiz de la matière · ${matiere.nom}`, points: r.points, total: r.total, sur20: r.sur20, pct: r.pct, duree: r.duree, detail });
       },
     });
   } catch (e) {
     if (alive) clear(box).append(h('div', { class: 'notice bad' }, e.message));
   }
+}
+
+// ---------------------------------------------------------------------------
+// Mes erreurs : questions ratées, reposées jusqu'à ce qu'elles soient réussies
+const splitKey = (id) => { const i = id.indexOf(':'); return [id.slice(0, i), id.slice(i + 1)]; };
+
+/** Enregistre réussites et erreurs d'un quiz terminé (keyOf(id) → [idQuiz, idQuestion]). */
+function recordErrors(detail, keyOf) {
+  const results = [];
+  for (const d of detail || []) {
+    if (!d.id) continue;
+    const [quizId, qid] = keyOf(d.id);
+    const loc = locateQuiz(idx, quizId);
+    if (!loc) continue;
+    results.push({
+      quizId, qid, verdict: d.v, coursId: loc.quiz.coursId || null, matiereId: loc.matiere.id,
+      question: d.t === 'qcm' ? { type: 'qcm', enonce: d.e, choix: d.c, bonnes: d.b } : { type: 'ouverte', enonce: d.e, reponse: d.r },
+    });
+  }
+  return recordResults(results);
+}
+
+/** Bouton « Mes erreurs (n) » d'un cours (ou des quiz de toute la matière si coursId est nul). */
+function mesErreursBtn(matiereId, coursId, cls = 'btn sm') {
+  const n = countFor(matiereId, coursId);
+  const label = h('span', null, 'Mes erreurs');
+  const badge = h('span', { class: `badge ${n ? 'bad' : ''}` }, String(n));
+  if (!n) return h('span', { class: `${cls} is-disabled`, title: 'Aucune erreur à revoir pour l\'instant', 'aria-disabled': 'true' }, icon('refresh'), label, badge);
+  return h('a', { class: cls, href: `#/erreurs/${matiereId}/${coursId || 'matiere'}`, title: 'Refaire les questions ratées' }, icon('refresh'), label, badge);
+}
+
+async function erreursPage({ mid, cid }) {
+  const loc = locateMatiere(idx, mid);
+  if (!loc) return notFound();
+  const { annee, matiere } = loc;
+  const coursId = cid === 'matiere' ? null : cid;
+  const cours = coursId ? matiere.cours.find((c) => c.id === coursId) : null;
+  if (coursId && !cours) return notFound();
+  const label = cours ? cours.titre : 'quiz de toute la matière';
+  const box = h('div');
+  setView(crumbs([
+    { label: 'Accueil', href: '#/' }, { label: annee.nom, href: `#/a/${annee.id}` }, { label: matiere.nom, href: `#/m/${matiere.id}/quiz` },
+    { label: `Mes erreurs · ${cours ? cours.titre : 'toute la matière'}` },
+  ]), box);
+  cleanup = () => quizGuard(false);
+  const current = () => errorsFor(matiere.id, coursId).map((e) => ({ ...e.question, id: errorKey(e.quizId, e.qid) }));
+  const questions = current();
+  if (!questions.length) {
+    box.append(h('div', { class: 'card result-hero' },
+      h('div', { class: 'year-num', style: { margin: '0 auto 16px' } }, icon('check')),
+      h('h1', null, 'Aucune erreur à revoir'),
+      h('p', { class: 'muted' }, `Les questions ratées dans les quiz « ${label} » apparaîtront ici. Elles disparaissent dès qu'elles sont réussies.`),
+      h('a', { class: 'btn', href: `#/m/${matiere.id}/quiz`, 'data-up': '' }, 'Retour aux quiz')));
+    return;
+  }
+  runQuiz(box, {
+    titre: `Mes erreurs · ${cours ? cours.titre : matiere.nom}`,
+    questions,
+    regenerate: current,
+    canRestart: () => countFor(matiere.id, coursId) > 0,
+    restartLabel: 'Refaire les erreurs restantes',
+    headerExtra: () => h('p', { class: 'muted small', style: { margin: '4px 0 0' } },
+      `${questions.length} question${questions.length > 1 ? 's' : ''} ratée${questions.length > 1 ? 's' : ''} précédemment. Une bonne réponse la retire de la liste.`),
+    resultNote: () => {
+      const n = countFor(matiere.id, coursId);
+      return h('p', { class: `notice ${n ? '' : 'good'}`, style: { flexBasis: '100%', margin: '8px 0 0' } },
+        n ? `Il reste ${n} erreur${n > 1 ? 's' : ''} à revoir pour ce cours.` : 'Plus aucune erreur à revoir pour ce cours. Bravo !');
+    },
+    backLabel: 'Retour aux quiz',
+    onGuard: quizGuard,
+    onExit: () => { quizGuard(false); router.back(`/m/${matiere.id}/quiz`); },
+    onFinish: (r, detail) => { recordErrors(detail, splitKey); },
+  });
 }
 
 // ---------------------------------------------------------------------------

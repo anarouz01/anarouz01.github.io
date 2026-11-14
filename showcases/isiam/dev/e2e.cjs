@@ -125,6 +125,8 @@ function check(label, cond, extra = '') {
     await e.click('.list-item:has-text("Quiz · Le mix marketing")');
     await e.waitForSelector('.question-card');
     check('Quiz : aucune réponse affichée avant la fin', (await e.locator('.is-correct').count()) === 0);
+    await e.waitForTimeout(1600);
+    check('Chronomètre : affiché pendant le quiz', /\d:\d\d · question \d:\d\d/.test(await e.locator('.quiz-timer').innerText()), await e.locator('.quiz-timer').innerText());
     const answers = {
       'Quels éléments font partie des 4P ?': ['Prix', 'Produit'],
       'La stratégie d\'écrémage consiste à :': ['Fixer un prix élevé'],
@@ -144,6 +146,8 @@ function check(label, cond, extra = '') {
     const note = (await e.locator('.result-score').innerText()).replace(/\s+/g, ' ');
     check('Quiz : réponses JSON (numéros à partir de 1) correctement corrigées → 12,5/20', note.includes('12,5'), note);
     await shot(e, '18-eleve-resultat');
+    check('Résultat : temps total et moyenne par question', /Temps total : \d+ s/.test(await e.locator('.result-time').innerText()), await e.locator('.result-time').innerText());
+    check('Résultat : temps de chaque question', (await e.locator('.review-meta').count()) === 4);
     const grab = () => e.evaluate(async () => Promise.all([...document.querySelectorAll('.share-thumb img')].map(async (img) => {
       const r = await fetch(img.src);
       const b = new Uint8Array(await r.arrayBuffer());
@@ -156,11 +160,24 @@ function check(label, cond, extra = '') {
     fs.writeFileSync(path.join(SHOTS, '40-partage-resultat.png'), Buffer.from(resImgs[0], 'base64'));
     check('Partage du résultat seul : 1 image', resImgs.length === 1);
     await e.keyboard.press('Escape');
+    check('Partage du résultat : image JPEG (pas de recompression)', Buffer.from(resImgs[0], 'base64').subarray(0, 2).toString('hex') === 'ffd8');
     await e.click('button:has-text("Partager la correction")');
-    await ready();
-    const imgs = await grab();
-    imgs.forEach((b64, i) => fs.writeFileSync(path.join(SHOTS, `40-partage-correction-${i}.png`), Buffer.from(b64, 'base64')));
-    check('Partage de la correction : toutes les questions sur une seule image', imgs.length === 1);
+    await e.waitForSelector('.pdf-file');
+    const pdfB64 = await e.evaluate(async () => {
+      const r = await fetch(document.querySelector('.modal a.btn[href^="blob:"]').href);
+      const b = new Uint8Array(await r.arrayBuffer());
+      let s = ''; for (const x of b) s += String.fromCharCode(x); return btoa(s);
+    });
+    const pdfBuf = Buffer.from(pdfB64, 'base64');
+    fs.writeFileSync(path.join(SHOTS, '40-correction.pdf'), pdfBuf);
+    check('Partage de la correction : PDF léger', pdfBuf.subarray(0, 5).toString() === '%PDF-' && pdfBuf.length < 60000, `${Math.round(pdfBuf.length / 1024)} Ko`);
+    const txt = await e.locator('.share-text').innerText();
+    check('Partage de la correction : version texte (avec temps)', txt.includes('*Correction · Quiz · Le mix marketing*') && txt.includes('⏱') && txt.includes('Attendu : La distribution'));
+    await e.locator('.modal label:has-text("Seulement les erreurs") input').check();
+    const txtErr = await e.locator('.share-text').innerText();
+    check('Partage texte : option « seulement les erreurs »', !txtErr.includes('✅') && txtErr.includes('❌'));
+    await e.waitForTimeout(300);
+    await e.screenshot({ path: path.join(SHOTS, '41-modale-correction.png') });
     await e.keyboard.press('Escape');
 
     await e.goto(`${BASE}/index.html#/`);
@@ -170,6 +187,35 @@ function check(label, cond, extra = '') {
     await e.click('a:has-text("Commencer")');
     await e.waitForSelector('.quiz-counter');
     check('Quiz de matière : 6 questions', (await e.locator('.quiz-counter').innerText()).endsWith('/ 6'));
+
+    // ----- Mes erreurs : 2 erreurs après le premier quiz (QCM raté + question ouverte partielle)
+    await e.goto(`${BASE}/index.html#/`);
+    await e.click('a.year-card:has-text("1re année")');
+    await e.click('.semester .card:has-text("Marketing")');
+    await e.click('a.tab:has-text("Quiz")');
+    const errBtn = e.locator('.group-head:has-text("Le mix marketing") a:has-text("Mes erreurs")');
+    await errBtn.waitFor();
+    check('Mes erreurs : bouton par cours avec 2 erreurs', (await errBtn.innerText()).includes('2'));
+    check('Mes erreurs : désactivé quand il n\'y a rien à revoir', (await e.locator('.group-head:has-text("toute la matière") .is-disabled:has-text("Mes erreurs")').count()) === 1);
+    await errBtn.click();
+    await e.waitForSelector('.quiz-counter');
+    check('Mes erreurs : le quiz reprend les 2 questions ratées', (await e.locator('.quiz-counter').innerText()).endsWith('/ 2'));
+    for (let i = 0; i < 2; i++) {
+      const q = (await e.locator('.question-text').innerText()).trim();
+      if (q.startsWith('La place')) await e.locator('.choice', { hasText: 'La distribution' }).locator('input').check();
+      else await e.fill('.question-card textarea', 'La place du produit dans l\'esprit du consommateur face aux concurrents.');
+      if (i < 1) await e.click('button:has-text("Suivant")');
+    }
+    await e.click('button:has-text("Terminer le quiz")');
+    await e.waitForSelector('h1:has-text("Auto-évaluation")');
+    await e.click('.seg button:has-text("Juste")');
+    await e.click('button:has-text("Voir mon résultat")');
+    await e.waitForSelector('.result-score');
+    await shot(e, '45-mes-erreurs-resultat');
+    check('Mes erreurs : réussies → la liste se vide', (await e.locator('.notice.good:has-text("Plus aucune erreur")').count()) === 1 && (await e.locator('button:has-text("Refaire les erreurs restantes")').count()) === 0);
+    await e.click('button:has-text("Retour aux quiz")');
+    await e.waitForSelector('.group-head');
+    check('Mes erreurs : compteur revenu à 0', (await e.locator('.group-head:has-text("Le mix marketing") .is-disabled:has-text("Mes erreurs")').count()) === 1);
 
     await e.goto(`${BASE}/index.html#/`);
     await e.waitForSelector('table.table');
@@ -197,7 +243,7 @@ function check(label, cond, extra = '') {
     check('Partage : a posteriori depuis la liste des quiz (4 tentatives)', (await e.locator('.share-thumb img').first().getAttribute('alt')).includes('4 tentatives'));
     await e.keyboard.press('Escape');
     await e.click('.course-row:has-text("Quiz · Le mix marketing") button[aria-label^="Partager la correction"]');
-    await e.waitForFunction(() => document.querySelectorAll('.share-thumb img').length === 1 && document.querySelector('.share-thumb img').naturalWidth > 0, null, { timeout: 15000 });
+    await e.waitForSelector('.pdf-file');
     check('Partage a posteriori : seule la tentative avec correction est proposée', (await e.locator('.modal select option').count()) === 1);
     await e.waitForTimeout(300);
     await e.screenshot({ path: path.join(SHOTS, '42-modale-correction.png') });

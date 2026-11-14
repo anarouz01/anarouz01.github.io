@@ -119,9 +119,13 @@ test('publier : lecture des quiz (QCM, ouverte, numéros à partir de 1)', () =>
   ] }), 'f');
   assert.deepEqual(r.errors, []);
   assert.equal(r.titre, 'T');
-  assert.deepEqual(r.questions[0], { id: 'x1', type: 'qcm', enonce: 'Q1', choix: ['a', 'b', 'c'], bonnes: [0, 2] });
+  assert.deepEqual({ ...r.questions[0], id: undefined }, { id: undefined, type: 'qcm', enonce: 'Q1', choix: ['a', 'b', 'c'], bonnes: [0, 2] });
   assert.deepEqual(r.questions[1].bonnes, [1]);
-  assert.deepEqual(r.questions[2], { id: 'x3', type: 'ouverte', enonce: 'Q3', reponse: 'R' });
+  assert.deepEqual({ ...r.questions[2], id: undefined }, { id: undefined, type: 'ouverte', enonce: 'Q3', reponse: 'R' });
+  // Identifiants stables : indépendants de la position, uniques même pour des doublons.
+  const r2 = P.parseQuiz(JSON.stringify({ questions: [{ q: 'Q3', reponse: 'R' }, { q: 'Q3', reponse: 'R' }] }), 'f');
+  assert.equal(r2.questions[0].id, r.questions[2].id);
+  assert.notEqual(r2.questions[0].id, r2.questions[1].id);
 });
 
 test('publier : erreurs de quiz explicites', () => {
@@ -176,4 +180,20 @@ test('store : détection YouTube', () => {
   assert.equal(S.youtubeId('https://www.youtube.com/watch?v=abc123'), 'abc123');
   assert.equal(S.youtubeId('https://youtu.be/xyz'), 'xyz');
   assert.equal(S.youtubeId('https://example.com'), null);
+});
+
+test('chronomètre : formats de durée', () => {
+  assert.equal(Q.formatDuree(42000), '42 s');
+  assert.equal(Q.formatDuree(492000), '8 min 12 s');
+  assert.equal(Q.formatDuree(600000), '10 min');
+  assert.equal(Q.formatDuree(3900000), '1 h 05 min');
+  assert.equal(Q.formatClock(187000), '3:07');
+  assert.equal(Q.formatClock(3765000), '1:02:45');
+});
+
+test('pdf : encodage WinAnsi et largeur du texte', async () => {
+  const pdf = await import('../js/pdf.js');
+  assert.deepEqual(pdf.encode('é€œ«✓'), [0xE9, 0x80, 0x9C, 0xAB, 63]);
+  assert.ok(pdf.textWidth('Économie', 10, true) > pdf.textWidth('Économie', 10));
+  assert.ok(pdf.wrapText('mot '.repeat(50), 10, 100).length > 5);
 });

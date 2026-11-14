@@ -156,6 +156,14 @@ export function parseQuiz(text, where) {
     return { errors };
   }
   const questions = [];
+  const usedIds = new Set();
+  // Identifiant stable : tiré du texte de la question (insensible à l'ordre dans le fichier).
+  const qid = (...parts) => {
+    let id = `q${createHash('sha256').update(parts.join('\u0001')).digest('hex').slice(0, 10)}`;
+    for (let k = 2; usedIds.has(id); k++) id = `${id.split('-')[0]}-${k}`;
+    usedIds.add(id);
+    return id;
+  };
   raw.questions.forEach((q, i) => {
     const at = `${where}, question ${i + 1}`;
     if (!q || typeof q !== 'object') { errors.push(`${at} : doit être un objet`); return; }
@@ -174,10 +182,10 @@ export function parseQuiz(text, where) {
       if (!Array.isArray(reps) || !reps.length) { errors.push(`${at} : « reponses » doit donner le ou les numéros des bonnes propositions (ex. [1, 3])`); return; }
       const bad = reps.filter((r) => !Number.isInteger(r) || r < 1 || r > q.choix.length);
       if (bad.length) { errors.push(`${at} : numéro(s) de bonne réponse invalide(s) ${JSON.stringify(bad)} (de 1 à ${q.choix.length})`); return; }
-      questions.push({ id: `x${i + 1}`, type: 'qcm', enonce, choix: q.choix.map((x) => x.trim()), bonnes: [...new Set(reps)].map((r) => r - 1).sort((a, b) => a - b) });
+      questions.push({ id: qid('qcm', enonce, ...q.choix.map((x) => x.trim())), type: 'qcm', enonce, choix: q.choix.map((x) => x.trim()), bonnes: [...new Set(reps)].map((r) => r - 1).sort((a, b) => a - b) });
     } else if (hasReponse) {
       if (typeof q.reponse !== 'string' || !q.reponse.trim()) { errors.push(`${at} : « reponse » doit être un texte non vide`); return; }
-      questions.push({ id: `x${i + 1}`, type: 'ouverte', enonce, reponse: q.reponse.trim() });
+      questions.push({ id: qid('ouverte', enonce), type: 'ouverte', enonce, reponse: q.reponse.trim() });
     } else {
       errors.push(`${at} : ajoutez « choix » + « reponses » (QCM) ou « reponse » (question ouverte)`);
     }

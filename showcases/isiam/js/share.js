@@ -4,7 +4,8 @@
 // Ne contient ni question ni réponse : seulement titres, dates et notes.
 // ==========================================================================
 import { h, clear, icon, modal, toast, downloadBytes, safeFilename } from './ui.js';
-import { formatNote } from './quiz-engine.js';
+import { formatNote, formatDuree, formatClock } from './quiz-engine.js';
+import { PdfDoc, wrapText, textWidth } from './pdf.js';
 
 const W = 1080;
 const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
@@ -130,6 +131,19 @@ export async function renderScoreCard(info) {
   y += 22;
   for (const l of wrap(ctx, info.titre, W - 2 * pad - 32, 2)) { ctx.fillText(l, lx, y); y += 66; }
 
+  // Temps passé sur la tentative
+  if (last.duree) {
+    ctx.strokeStyle = C.ink2;
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(lx + 14, y - 10, 13, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(lx + 14, y - 18); ctx.lineTo(lx + 14, y - 10); ctx.lineTo(lx + 20, y - 6); ctx.stroke();
+    ctx.fillStyle = C.ink2;
+    ctx.font = `600 28px ${FONT}`;
+    const n0 = (last.detail && last.detail.length) || last.total || 0;
+    ctx.fillText(`Temps : ${formatDuree(last.duree)}${n0 ? ` · ${formatDuree(last.duree / n0)} par question` : ''}`, lx + 40, y);
+    y += 30;
+  }
+
   // Chiffres clés
   y += 30;
   const boxW = (W - 2 * pad - 32 - 2 * 24) / 3;
@@ -163,7 +177,7 @@ export async function renderScoreCard(info) {
   ctx.textAlign = 'left';
   y += 30;
   const chartTop = y + 50;
-  const chartBottom = H - 40 - 150;
+  const chartBottom = H - 40 - 140;
   const chartH = chartBottom - chartTop;
   const left = lx + 54;
   const right = W - pad - 16;
@@ -207,6 +221,7 @@ export async function renderScoreCard(info) {
     ctx.fillStyle = C.ink3;
     ctx.font = `500 ${shown.length > 8 ? 16 : 20}px ${FONT}`;
     ctx.fillText(shortDate(a.date), cx, chartBottom + 62);
+    if (a.duree) { ctx.fillText(formatClock(a.duree), cx, chartBottom + 86); }
     ctx.textAlign = 'left';
   });
 
@@ -214,47 +229,52 @@ export async function renderScoreCard(info) {
   ctx.fillStyle = C.ink3;
   ctx.font = `500 22px ${FONT}`;
   const foot = offset > 0 ? `${offset} tentative(s) plus ancienne(s) non affichée(s) · notes sur 20` : 'Notes sur 20';
-  ctx.fillText(foot, lx, H - 40 - 50);
+  ctx.fillText(foot, lx, H - 40 - 18);
 
-  return new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/png'));
+  // JPEG à la bonne taille : WhatsApp ne le redimensionne pas et l'abîme moins.
+  return new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.92));
 }
 
 export function shareText(info) {
   const attempts = [...info.attempts].sort((a, b) => a.date.localeCompare(b.date));
   const best = Math.max(...attempts.map((a) => a.sur20));
+  const last = attempts[attempts.length - 1];
   const suite = attempts.slice(-8).map((a) => formatNote(a.sur20)).join(' → ');
-  return `📚 ${info.titre} (${info.contexte})\n${attempts.length} tentative${attempts.length > 1 ? 's' : ''} : ${suite} /20 · meilleure note ${formatNote(best)}/20`;
+  return `📚 ${info.titre} (${info.contexte})\n${attempts.length} tentative${attempts.length > 1 ? 's' : ''} : ${suite} /20 · meilleure note ${formatNote(best)}/20`
+    + (last.duree ? `\n⏱ Dernière tentative en ${formatDuree(last.duree)}` : '');
 }
 
 // ---------------------------------------------------------------------------
-// Correction détaillée en UNE image : toutes les questions, en colonnes
-// (1 à 3 selon le nombre de questions), comme l'écran de fin de quiz.
+// Correction détaillée en PDF : vrai texte (net à tous les zooms), léger, et
+// envoyé par WhatsApp comme un document, donc sans recompression.
 // ---------------------------------------------------------------------------
-const VERDICT = {
-  juste: { col: C.good, txt: '✓' },
-  partiel: { col: C.warn, txt: '½' },
-  faux: { col: C.bad, txt: '✗' },
+const PAGE_W = 595.28;
+const PAGE_H = 841.89;
+const MG = 40;
+const CW = PAGE_W - 2 * MG;
+const VERD = {
+  juste: { col: C.good, label: 'juste' },
+  partiel: { col: C.warn, label: 'partiel' },
+  faux: { col: C.bad, label: 'faux' },
 };
 
-/** Bloc « question » compact : hauteur + dessin, pour une colonne de largeur cw. */
-function questionBlock(ctx, d, num, cw) {
+/** Bloc d'une question : hauteur + dessin. */
+function pdfBlock(d, n) {
   const ops = [];
-  const tx = 44;              // texte après la pastille
-  const tw = cw - tx;
-  let hgt = 0;
-  ctx.font = `650 25px ${FONT}`;
-  const qLines = wrap(ctx, `${num}. ${d.e}`, tw);
-  ops.push((c, x, y) => {
-    const v = VERDICT[d.v] || VERDICT.faux;
-    c.fillStyle = v.col;
-    c.beginPath(); c.arc(x + 16, y + 17, 16, 0, Math.PI * 2); c.fill();
-    c.fillStyle = '#fff'; c.font = `800 18px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillText(v.txt, x + 16, y + 18);
-    c.textAlign = 'left'; c.textBaseline = 'alphabetic';
-    c.fillStyle = C.ink; c.font = `650 25px ${FONT}`;
-    qLines.forEach((l, k) => c.fillText(l, x + tx, y + 26 + k * 32));
+  const TX = 24;
+  const tw = CW - TX - 46;
+  let y = 0;
+  const qLines = wrapText(`${n}. ${d.e}`, 10.5, tw, true);
+  ops.push((p, x, top) => {
+    const v = VERD[d.v] || VERD.faux;
+    p.circle(x + 8, top + 7, 8, { fill: v.col });
+    if (d.v === 'juste') p.line([[x + 4.2, top + 7.2], [x + 7, top + 10], [x + 12, top + 4.4]], { stroke: '#ffffff', lw: 1.8 });
+    else if (d.v === 'partiel') p.text('½', x + 8, top + 10.4, { size: 9, bold: true, color: '#ffffff', align: 'center' });
+    else { p.line([[x + 5, top + 4], [x + 11, top + 10]], { stroke: '#ffffff', lw: 1.8 }); p.line([[x + 11, top + 4], [x + 5, top + 10]], { stroke: '#ffffff', lw: 1.8 }); }
+    qLines.forEach((l, i) => p.text(l, x + TX, top + 11 + i * 14, { size: 10.5, bold: true, color: C.ink }));
+    if (d.ms) p.text(formatClock(d.ms), x + CW, top + 11, { size: 8.5, color: C.ink3, align: 'right' });
   });
-  hgt += qLines.length * 32 + 8;
+  y += qLines.length * 14 + 5;
 
   if (d.t === 'qcm') {
     const good = new Set(d.b);
@@ -263,211 +283,186 @@ function questionBlock(ctx, d, num, cw) {
       const isGood = good.has(k);
       const isSel = sel.has(k);
       const tag = isGood && isSel ? 'bonne réponse, cochée' : isGood ? 'bonne réponse, non cochée' : isSel ? 'cochée à tort' : '';
-      ctx.font = `500 21px ${FONT}`;
-      const lines = wrap(ctx, choice, tw - 52);
-      const boxH = lines.length * 27 + (tag ? 22 : 0) + 14;
-      const top = hgt;
-      ops.push((c, x, y) => {
-        const bx = x + tx;
-        const by = y + top;
-        c.fillStyle = isGood ? '#e3f3ea' : isSel ? '#fbe6e4' : '#ffffff';
-        rrect(c, bx, by, tw, boxH, 10); c.fill();
-        c.strokeStyle = isGood ? C.good : isSel ? C.bad : C.line; c.lineWidth = isGood || isSel ? 2.5 : 1.5;
-        rrect(c, bx, by, tw, boxH, 10); c.stroke();
-        c.strokeStyle = C.ink2; c.lineWidth = 2.5;
-        rrect(c, bx + 14, by + 10, 20, 20, 5); c.stroke();
-        if (isSel) {
-          c.strokeStyle = isGood ? C.good : C.bad; c.lineWidth = 3.5;
-          c.beginPath(); c.moveTo(bx + 18, by + 20); c.lineTo(bx + 23, by + 25); c.lineTo(bx + 31, by + 14); c.stroke();
-        }
-        c.fillStyle = C.ink; c.font = `500 21px ${FONT}`;
-        lines.forEach((l, i) => c.fillText(l, bx + 46, by + 27 + i * 27));
-        if (tag) {
-          c.fillStyle = isGood ? C.good : C.bad; c.font = `600 17px ${FONT}`;
-          c.fillText(tag, bx + 46, by + 27 + lines.length * 27 - 3);
-        }
+      const lines = wrapText(choice, 9.5, CW - TX - 32);
+      const bh = lines.length * 12.5 + (tag ? 10 : 0) + 7;
+      const top0 = y;
+      ops.push((p, x, top) => {
+        const bx = x + TX;
+        const by = top + top0;
+        p.rect(bx, by, CW - TX, bh, { fill: isGood ? '#e3f3ea' : isSel ? '#fbe6e4' : '#ffffff', stroke: isGood ? C.good : isSel ? C.bad : C.line, lw: isGood || isSel ? 1.1 : 0.7, r: 4 });
+        p.rect(bx + 8, by + 5, 8, 8, { stroke: C.ink2, lw: 0.9, r: 1.5 });
+        if (isSel) p.line([[bx + 9.6, by + 9], [bx + 11.6, by + 11.2], [bx + 15, by + 6.2]], { stroke: isGood ? C.good : C.bad, lw: 1.4 });
+        lines.forEach((l, i) => p.text(l, bx + 24, by + 12 + i * 12.5, { size: 9.5, color: C.ink }));
+        if (tag) p.text(tag, bx + 24, by + 12 + lines.length * 12.5 - 1.5, { size: 7.5, bold: true, color: isGood ? C.good : C.bad });
       });
-      hgt += boxH + 6;
+      y += bh + 3;
     });
   } else {
     const box = (label, text, fill, stroke) => {
-      ctx.font = `500 21px ${FONT}`;
-      const lines = wrap(ctx, text || '(sans réponse)', tw - 28);
-      const boxH = lines.length * 27 + 16;
-      const top = hgt;
-      ops.push((c, x, y) => {
-        c.fillStyle = C.ink2; c.font = `650 17px ${FONT}`;
-        c.fillText(label, x + tx, y + top + 17);
-        const by = y + top + 24;
-        c.fillStyle = fill; rrect(c, x + tx, by, tw, boxH, 10); c.fill();
-        c.strokeStyle = stroke; c.lineWidth = 1.5; rrect(c, x + tx, by, tw, boxH, 10); c.stroke();
-        c.fillStyle = C.ink; c.font = `500 21px ${FONT}`;
-        lines.forEach((l, i) => c.fillText(l, x + tx + 14, y + top + 24 + 27 + i * 27));
+      const lines = wrapText(text || '(sans réponse)', 9.5, CW - TX - 16);
+      const bh = lines.length * 12.5 + 7;
+      const top0 = y;
+      ops.push((p, x, top) => {
+        p.text(label, x + TX, top + top0 + 8, { size: 7.5, bold: true, color: C.ink2 });
+        p.rect(x + TX, top + top0 + 11, CW - TX, bh, { fill, stroke, lw: 0.7, r: 4 });
+        lines.forEach((l, i) => p.text(l, x + TX + 8, top + top0 + 11 + 12 + i * 12.5, { size: 9.5, color: C.ink }));
       });
-      hgt += 24 + boxH + 8;
+      y += 11 + bh + 4;
     };
     box('Réponse de l\'élève', d.x, '#f1f1ee', C.line);
     box('Réponse attendue', d.r, '#e3f3ea', '#9fd1b5');
-    const top = hgt;
-    ops.push((c, x, y) => {
-      c.fillStyle = (VERDICT[d.v] || VERDICT.faux).col; c.font = `650 17px ${FONT}`;
-      c.fillText(`Auto-évaluation : ${d.v}`, x + tx, y + top + 16);
-    });
-    hgt += 24;
+    const top0 = y;
+    ops.push((p, x, top) => p.text(`Auto-évaluation : ${d.v}`, x + TX, top + top0 + 8, { size: 7.5, bold: true, color: (VERD[d.v] || VERD.faux).col }));
+    y += 11;
   }
-  return { h: hgt + 6, draw: (c, x, y) => ops.forEach((op) => op(c, x, y)) };
+  return { h: y + 2, draw: (p, x, top) => ops.forEach((op) => op(p, x, top)) };
 }
 
-/** Génère UNE image avec toutes les questions de la tentative et leurs corrigés. */
-export async function renderCorrectionImage(info, attempt) {
+/** PDF de la correction complète d'une tentative. */
+export function renderCorrectionPdf(info, attempt) {
   const all = [...info.attempts].sort((a, b) => a.date.localeCompare(b.date));
-  const num = all.indexOf(attempt) + 1;
-  const n = attempt.detail.length;
-  const cols = n <= 6 ? 1 : n <= 16 ? 2 : 3;
-  const colW = cols === 1 ? 984 : 660;
-  const GUT = 44;
-  const MX = 48;
-  const width = MX * 2 + cols * colW + (cols - 1) * GUT;
-  const scratch = document.createElement('canvas').getContext('2d');
-  const blocks = attempt.detail.map((d, i) => questionBlock(scratch, d, i + 1, colW));
+  const numT = all.indexOf(attempt) + 1;
+  const det = attempt.detail;
+  const blocks = det.map((d, i) => pdfBlock(d, i + 1));
+  const titleLines = wrapText(info.titre, 17, CW - 130, true);
+  const head1 = 64 + titleLines.length * 21 + (attempt.duree ? 30 : 16);
+  const headN = 34;
+  const footH = 30;
+  const GAP = 12;
 
-  // Répartition équilibrée en colonnes, dans l'ordre des questions.
-  const totalH = blocks.reduce((s, b) => s + b.h + 26, 0);
-  const target = totalH / cols;
-  const columns = Array.from({ length: cols }, () => []);
-  let ci = 0;
-  let acc = 0;
+  // Pagination
+  const pages = [[]];
+  let used = head1;
   for (const b of blocks) {
-    if (ci < cols - 1 && acc > 0 && acc + (b.h + 26) / 2 > target) { ci++; acc = 0; }
-    columns[ci].push(b);
-    acc += b.h + 26;
+    const page = pages[pages.length - 1];
+    if (page.length && used + b.h + GAP > PAGE_H - footH) { pages.push([]); used = headN; }
+    pages[pages.length - 1].push(b);
+    used += b.h + GAP;
   }
-  const colH = columns.map((col) => col.reduce((s, b) => s + b.h + 26, 0));
 
-  scratch.font = `750 38px ${FONT}`;
-  const titleLines = wrap(scratch, info.titre, width - 2 * MX - 260, 2);
-  const headH = 118 + titleLines.length * 46 + 30;
-  const footH = 56;
-  const height = Math.ceil(headH + 24 + Math.max(...colH) + footH);
-
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const c = canvas.getContext('2d');
-  c.fillStyle = '#ffffff';
-  c.fillRect(0, 0, width, height);
-  // En-tête
-  c.fillStyle = C.bg;
-  c.fillRect(0, 0, width, headH);
-  c.fillStyle = C.accent;
-  rrect(c, MX, 36, 46, 46, 12); c.fill();
-  c.fillStyle = '#fff'; c.font = `800 26px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle';
-  c.fillText('✓', MX + 23, 60);
-  c.textAlign = 'left';
-  c.fillStyle = C.ink; c.font = `700 28px ${FONT}`;
-  c.fillText('Révisions ISIAM · Correction', MX + 62, 60);
-  c.textBaseline = 'alphabetic';
-  let y = 128;
-  c.font = `750 38px ${FONT}`;
-  titleLines.forEach((l) => { c.fillText(l, MX, y); y += 46; });
-  c.font = `600 22px ${FONT}`;
-  c.fillStyle = C.ink2;
-  c.fillText(`${info.contexte ? `${info.contexte} · ` : ''}tentative n°${num} du ${longDate(attempt.date)} · ${n} questions`, MX, y + 2);
-  // Note (à droite)
-  c.textAlign = 'right';
-  c.fillStyle = colorFor(attempt.sur20);
-  c.font = `800 64px ${FONT}`;
-  c.fillText(`${formatNote(attempt.sur20)}/20`, width - MX, 128);
-  c.fillStyle = C.ink3;
-  c.font = `600 20px ${FONT}`;
-  c.fillText(`${formatNote(attempt.points)} point${attempt.points > 1 ? 's' : ''} sur ${attempt.total}`, width - MX, 160);
-  c.textAlign = 'left';
-  // Colonnes
-  columns.forEach((col, k) => {
-    const x = MX + k * (colW + GUT);
-    let cy = headH + 24;
-    col.forEach((b, i) => {
-      if (i) {
-        c.strokeStyle = C.line; c.lineWidth = 1.5;
-        c.beginPath(); c.moveTo(x, cy - 13); c.lineTo(x + colW, cy - 13); c.stroke();
-      }
-      b.draw(c, x, cy);
-      cy += b.h + 26;
+  const doc = new PdfDoc({ title: `Correction - ${info.titre}` });
+  pages.forEach((blocksOfPage, pi) => {
+    const p = doc.addPage(PAGE_W, PAGE_H);
+    let y;
+    if (pi === 0) {
+      p.rect(MG, 28, 14, 14, { fill: C.accent, r: 3 });
+      p.line([[MG + 3.5, 35.2], [MG + 6, 38], [MG + 10.5, 32]], { stroke: '#ffffff', lw: 1.6 });
+      p.text('Révisions ISIAM · Correction', MG + 20, 39, { size: 10, bold: true, color: C.ink });
+      let ty = 66;
+      titleLines.forEach((l) => { p.text(l, MG, ty, { size: 17, bold: true, color: C.ink }); ty += 21; });
+      p.text(`${info.contexte ? `${info.contexte} · ` : ''}tentative n°${numT} du ${longDate(attempt.date)} · ${det.length} questions`, MG, ty + 1, { size: 9, color: C.ink2 });
+      if (attempt.duree) p.text(`Temps total : ${formatDuree(attempt.duree)} · ${formatDuree(attempt.duree / det.length)} par question en moyenne`, MG, ty + 15, { size: 9, bold: true, color: C.ink2 });
+      p.text(`${formatNote(attempt.sur20)}/20`, PAGE_W - MG, 66, { size: 26, bold: true, color: colorFor(attempt.sur20), align: 'right' });
+      p.text(`${formatNote(attempt.points)} point${attempt.points > 1 ? 's' : ''} sur ${attempt.total}`, PAGE_W - MG, 80, { size: 8.5, color: C.ink3, align: 'right' });
+      y = head1;
+    } else {
+      p.text(`Correction · ${info.titre}`, MG, 26, { size: 8.5, bold: true, color: C.ink3 });
+      y = headN;
+    }
+    p.line([[MG, y - 8], [PAGE_W - MG, y - 8]], { stroke: C.line, lw: 0.7 });
+    blocksOfPage.forEach((b, k) => {
+      if (k) p.line([[MG + 24, y - GAP / 2], [PAGE_W - MG, y - GAP / 2]], { stroke: C.line, lw: 0.5 });
+      b.draw(p, MG, y);
+      y += b.h + GAP;
     });
-    if (k) { c.strokeStyle = C.line; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x - GUT / 2, headH + 16); c.lineTo(x - GUT / 2, height - footH); c.stroke(); }
+    p.text('Légende : vert = bonne réponse · rouge = cochée à tort · durée par question à droite', MG, PAGE_H - 18, { size: 7.5, color: C.ink3 });
+    p.text(`page ${pi + 1} / ${pages.length}`, PAGE_W - MG, PAGE_H - 18, { size: 7.5, color: C.ink3, align: 'right' });
   });
-  // Pied
-  c.fillStyle = C.ink3; c.font = `500 19px ${FONT}`;
-  c.fillText('✓ juste   ½ partiel   ✗ faux · vert = bonne réponse · rouge = cochée à tort', MX, height - 22);
-  return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+  return doc.toBlob();
+}
+
+/** Correction au format texte (WhatsApp : *gras*, _italique_). */
+export function correctionText(info, attempt, { erreursSeules = false } = {}) {
+  const all = [...info.attempts].sort((a, b) => a.date.localeCompare(b.date));
+  const numT = all.indexOf(attempt) + 1;
+  const det = attempt.detail;
+  const lines = [
+    `*Correction · ${info.titre}*`,
+    `${info.contexte ? `${info.contexte} · ` : ''}tentative n°${numT} du ${shortDate(attempt.date)}`,
+    `Note : *${formatNote(attempt.sur20)}/20*${attempt.duree ? ` · ⏱ ${formatDuree(attempt.duree)}` : ''}`,
+    '',
+  ];
+  const nbErr = det.filter((d) => d.v !== 'juste').length;
+  det.forEach((d, i) => {
+    if (erreursSeules && d.v === 'juste') return;
+    const mark = d.v === 'juste' ? '✅' : d.v === 'partiel' ? '🟠' : '❌';
+    lines.push(`${mark} *${i + 1}.* ${d.e}${d.ms ? ` _(${formatClock(d.ms)})_` : ''}`);
+    if (d.v !== 'juste') {
+      if (d.t === 'qcm') {
+        const sel = d.s.map((k) => d.c[k]);
+        lines.push(`   ✗ Coché : ${sel.length ? sel.join(' ; ') : '(rien)'}`);
+        lines.push(`   ✓ Attendu : ${d.b.map((k) => d.c[k]).join(' ; ')}`);
+      } else {
+        lines.push(`   ✗ Réponse : ${d.x || '(sans réponse)'}`);
+        lines.push(`   ✓ Attendu : ${d.r}`);
+      }
+    }
+  });
+  if (erreursSeules && !nbErr) lines.push('Aucune erreur 🎉');
+  return lines.join('\n');
 }
 
 // ---------------------------------------------------------------------------
 // Fenêtres de partage
 // ---------------------------------------------------------------------------
-function shareModal({ heading, select, intro, makeFiles, text, note }) {
-  let files = [];
-  let urls = [];
-  const strip = h('div', { class: 'share-strip' });
-  const shareBtn = h('button', { type: 'button', class: 'btn primary' }, icon('share'), 'Partager (WhatsApp…)');
-  const saveBtn = h('button', { type: 'button', class: 'btn' }, icon('download'), 'Télécharger l\'image');
-
-  async function build() {
-    urls.forEach((u) => URL.revokeObjectURL(u));
-    clear(strip).append(h('div', { class: 'loader' }, h('div', { class: 'spinner' }), 'Création de l\'image…'));
-    shareBtn.disabled = saveBtn.disabled = true;
-    files = await makeFiles();
-    urls = files.map((f) => URL.createObjectURL(f));
-    clear(strip).append(...urls.map((u, i) => h('a', { href: u, target: '_blank', rel: 'noopener', class: 'share-thumb single', title: 'Ouvrir en grand' },
-      h('img', { src: u, alt: i === 0 ? text() : '' }))));
-    shareBtn.disabled = saveBtn.disabled = false;
-    shareBtn.hidden = !(navigator.canShare && navigator.canShare({ files }));
+async function shareFiles(files, text, title) {
+  try {
+    await navigator.share({ files, text, title });
+  } catch (e) {
+    if (e && e.name === 'AbortError') return;
+    toast('Partage impossible ici : téléchargez le fichier puis envoyez-le.', 'bad');
   }
-  shareBtn.addEventListener('click', async () => {
-    try {
-      await navigator.share({ files, text: text(), title: heading });
-    } catch (e) {
-      if (e && e.name === 'AbortError') return;
-      toast('Partage impossible ici : téléchargez l\'image puis envoyez-la.', 'bad');
-    }
-  });
-  saveBtn.addEventListener('click', async () => {
-    for (const f of files) downloadBytes(new Uint8Array(await f.arrayBuffer()), f.name, 'image/png');
-  });
-  if (select) select.addEventListener('change', build);
-
-  const m = modal([
-    h('h2', null, heading),
-    select ? h('div', { class: 'field' }, h('label', null, 'Tentative'), select) : null,
-    strip,
-    intro ? h('p', { class: 'tiny muted' }, intro) : null,
-    h('div', { class: 'form-actions share-actions' }, shareBtn, saveBtn,
-      h('button', { type: 'button', class: 'btn ghost', onClick: () => m.close() }, 'Fermer')),
-    h('p', { class: 'tiny muted' }, note),
-  ], { wide: true, onClose: () => urls.forEach((u) => URL.revokeObjectURL(u)) });
-  build();
 }
 
-/** Partage du résultat seul : notes et tentatives (aucune question ni réponse). */
+async function shareTextOnly(text) {
+  if (navigator.share) {
+    try { await navigator.share({ text }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  window.open(`https://wa.me/?text=${encodeURIComponent(text.slice(0, 3500))}`, '_blank', 'noopener');
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('Texte copié : collez-le dans WhatsApp.', 'good');
+  } catch {
+    toast('Copie impossible sur ce navigateur.', 'bad');
+  }
+}
+
+/** Partage du résultat seul : image (notes, tentatives, temps), sans question ni réponse. */
 export async function openShare(info) {
   if (!info.attempts || !info.attempts.length) { toast('Aucune tentative à partager pour l\'instant.'); return; }
   const sorted = [...info.attempts].sort((a, b) => a.date.localeCompare(b.date));
-  shareModal({
-    heading: 'Partager mon résultat',
-    intro: 'L\'image contient seulement le titre, les dates et les notes : aucune question ni réponse.',
-    note: 'Sur ordinateur : téléchargez l\'image, puis joignez-la dans WhatsApp.',
-    text: () => shareText({ ...info, attempts: sorted }),
-    makeFiles: async () => {
-      const blob = await renderScoreCard({ ...info, attempts: sorted });
-      return [new File([blob], `${safeFilename(`resultat ${info.titre}`)}.png`, { type: 'image/png' })];
-    },
-  });
+  const text = shareText({ ...info, attempts: sorted });
+  const preview = h('div', { class: 'share-strip' }, h('div', { class: 'loader' }, h('div', { class: 'spinner' }), 'Création de l\'image…'));
+  const shareBtn = h('button', { type: 'button', class: 'btn primary', disabled: true }, icon('share'), 'Partager (WhatsApp…)');
+  const saveBtn = h('button', { type: 'button', class: 'btn', disabled: true }, icon('download'), 'Télécharger l\'image');
+  let url = null;
+  const m = modal([
+    h('h2', null, 'Partager mon résultat'),
+    preview,
+    h('p', { class: 'tiny muted' }, 'L\'image contient le titre, les dates, les notes et les temps : aucune question ni réponse.'),
+    h('div', { class: 'form-actions share-actions' }, shareBtn, saveBtn,
+      h('button', { type: 'button', class: 'btn ghost', onClick: () => copyText(text) }, icon('copy'), 'Copier le texte'),
+      h('button', { type: 'button', class: 'btn ghost', onClick: () => m.close() }, 'Fermer')),
+  ], { wide: true, onClose: () => url && URL.revokeObjectURL(url) });
+  const blob = await renderScoreCard({ ...info, attempts: sorted });
+  const file = new File([blob], `${safeFilename(`resultat ${info.titre}`)}.jpg`, { type: 'image/jpeg' });
+  url = URL.createObjectURL(blob);
+  clear(preview).append(h('a', { href: url, target: '_blank', rel: 'noopener', class: 'share-thumb single' }, h('img', { src: url, alt: text })));
+  saveBtn.disabled = false;
+  saveBtn.onclick = async () => downloadBytes(new Uint8Array(await blob.arrayBuffer()), file.name, 'image/jpeg');
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    shareBtn.disabled = false;
+    shareBtn.onclick = () => shareFiles([file], text, info.titre);
+  } else shareBtn.hidden = true;
 }
 
 /** Tentatives dont la correction détaillée est disponible. */
 export const withDetail = (attempts) => (attempts || []).filter((a) => a.detail && a.detail.length);
 
-/** Partage de la correction détaillée d'une tentative, en une seule image. */
+/** Partage de la correction d'une tentative : PDF (document) ou texte. */
 export async function openShareCorrection(info) {
   const sorted = [...(info.attempts || [])].sort((a, b) => a.date.localeCompare(b.date));
   const avail = withDetail(sorted);
@@ -475,21 +470,49 @@ export async function openShareCorrection(info) {
   const initial = avail.find((a) => a.id === info.selectedId) || avail[avail.length - 1];
   const select = h('select', { class: 'select', 'aria-label': 'Tentative à partager' },
     [...avail].reverse().map((a) => h('option', { value: a.id, selected: a === initial },
-      `Tentative n°${sorted.indexOf(a) + 1} · ${shortDate(a.date)} · ${formatNote(a.sur20)}/20`)));
+      `Tentative n°${sorted.indexOf(a) + 1} · ${shortDate(a.date)} · ${formatNote(a.sur20)}/20${a.duree ? ` · ${formatDuree(a.duree)}` : ''}`)));
+  const onlyErr = h('input', { type: 'checkbox' });
+  const pdfInfo = h('div', { class: 'pdf-file' });
+  const textBox = h('pre', { class: 'share-text', 'aria-label': 'Aperçu du texte' });
+  const sharePdfBtn = h('button', { type: 'button', class: 'btn primary' }, icon('share'), 'Partager le PDF (WhatsApp…)');
+  const savePdfBtn = h('button', { type: 'button', class: 'btn' }, icon('download'), 'Télécharger le PDF');
+  const openPdfLink = h('a', { class: 'btn ghost', target: '_blank', rel: 'noopener' }, icon('eye'), 'Voir le PDF');
+  let pdfFile = null;
+  let pdfUrl = null;
+  let text = '';
   const current = () => avail.find((a) => a.id === select.value) || initial;
-  shareModal({
-    heading: 'Partager la correction',
-    select,
-    intro: 'Une seule image : toutes les questions, les réponses de l\'élève et les corrigés. Touchez l\'aperçu pour l\'ouvrir en grand.',
-    note: 'Astuce WhatsApp : activez « HD » à l\'envoi pour garder le texte bien lisible.',
-    text: () => {
-      const a = current();
-      return `📝 Correction · ${info.titre} (${info.contexte}) : ${formatNote(a.sur20)}/20, tentative du ${shortDate(a.date)}`;
-    },
-    makeFiles: async () => {
-      const a = current();
-      const blob = await renderCorrectionImage({ ...info, attempts: sorted }, a);
-      return [new File([blob], `${safeFilename(`correction ${info.titre} ${shortDate(a.date)}`)}.png`, { type: 'image/png' })];
-    },
-  });
+
+  function build() {
+    const a = current();
+    const full = { ...info, attempts: sorted };
+    const blob = renderCorrectionPdf(full, a);
+    pdfFile = new File([blob], `${safeFilename(`correction ${info.titre} ${shortDate(a.date)}`)}.pdf`, { type: 'application/pdf' });
+    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    pdfUrl = URL.createObjectURL(blob);
+    openPdfLink.href = pdfUrl;
+    clear(pdfInfo).append(icon('file'), h('span', { class: 'grow' }, h('strong', null, pdfFile.name), h('span', { class: 'tiny muted', style: { display: 'block' } },
+      `${a.detail.length} questions · ${Math.max(1, Math.round(blob.size / 1024))} Ko · texte net, sans perte de qualité`)));
+    sharePdfBtn.hidden = !(navigator.canShare && navigator.canShare({ files: [pdfFile] }));
+    text = correctionText(full, a, { erreursSeules: onlyErr.checked });
+    textBox.textContent = text;
+  }
+  select.addEventListener('change', build);
+  onlyErr.addEventListener('change', build);
+  sharePdfBtn.addEventListener('click', () => shareFiles([pdfFile], `Correction · ${info.titre}`, info.titre));
+  savePdfBtn.addEventListener('click', async () => downloadBytes(new Uint8Array(await pdfFile.arrayBuffer()), pdfFile.name, 'application/pdf'));
+
+  modal([
+    h('h2', null, 'Partager la correction'),
+    h('div', { class: 'field' }, h('label', null, 'Tentative'), select),
+    h('h3', { class: 'share-sub' }, 'En PDF'),
+    pdfInfo,
+    h('div', { class: 'form-actions share-actions' }, sharePdfBtn, savePdfBtn, openPdfLink),
+    h('h3', { class: 'share-sub' }, 'En texte'),
+    h('label', { class: 'check', style: { marginBottom: '8px' } }, onlyErr, 'Seulement les erreurs'),
+    textBox,
+    h('div', { class: 'form-actions share-actions' },
+      h('button', { type: 'button', class: 'btn', onClick: () => shareTextOnly(text) }, icon('share'), 'Envoyer le texte'),
+      h('button', { type: 'button', class: 'btn', onClick: () => copyText(text) }, icon('copy'), 'Copier le texte')),
+  ], { wide: true, onClose: () => pdfUrl && URL.revokeObjectURL(pdfUrl) });
+  build();
 }

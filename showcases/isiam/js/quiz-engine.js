@@ -3,7 +3,7 @@
 // ==========================================================================
 
 export const SELF_POINTS = { juste: 1, partiel: 0.5, faux: 0 };
-export const MATIERE_QUIZ_SIZE = 20;
+export const MATIERE_QUIZ_SIZE = 30;
 
 /** Générateur pseudo-aléatoire reproductible (tests). */
 export function mulberry32(seed) {

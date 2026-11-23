@@ -653,15 +653,19 @@ async function quizMatierePage({ id }) {
   cleanup = () => { alive = false; quizGuard(false); };
   try {
     const groups = [];
+    const manquants = [];
     for (const g of quizGroups(matiere)) {
       const qs = [];
       for (const quiz of g.quiz) {
-        const content = await data.quiz(key, quiz);
+        // Un quiz illisible (fichier pas encore publié…) ne doit pas bloquer tout le quiz de la matière.
+        let content;
+        try { content = await data.quiz(key, quiz); } catch (err) { manquants.push(quiz.titre || quiz.id); continue; }
         for (const q of content.questions || []) qs.push({ ...q, id: `${quiz.id}:${q.id}` });
       }
       groups.push(qs);
     }
     if (!alive) return;
+    if (manquants.length) console.warn('Quiz de la matière : quiz ignorés (fichier introuvable) :', manquants);
     if (!groups.some((g) => g.length)) {
       clear(box).append(empty('Aucune question disponible pour cette matière.', 'quiz'));
       return;
